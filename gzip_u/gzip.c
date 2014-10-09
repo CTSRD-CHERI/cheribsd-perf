@@ -158,7 +158,11 @@ static suffixes_t suffixes[] = {
 #define NUM_SUFFIXES (sizeof suffixes / sizeof suffixes[0])
 #define SUFFIX_MAXLEN	30
 
-static	const char	gzip_version[] = "FreeBSD gzip 20111009";
+#ifndef GIT_COMMIT_STRING
+#define GIT_COMMIT_STRING "(unknown revision)"
+#endif // GIT_COMMIT_STRING
+
+static	const char	gzip_version[] = "FreeBSD gzip 20111009 (CHERI, gzip_u, " GIT_COMMIT_STRING ")";
 
 #ifndef SMALL
 static	const char	gzip_copyright[] = \
