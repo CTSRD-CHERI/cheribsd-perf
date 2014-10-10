@@ -1,4 +1,8 @@
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 typedef struct
 {
@@ -15,10 +19,10 @@ void gzip_show (FILE * fp);
 void gzip_read_member (FILE * fp, gzip_member * gzm);
 void gzip_print_member (gzip_member gzm);
 uint32_t gzm_get (uint8_t * cptr, int sz);
-#define GZM_GET(gzmbr) gzm_get(&gzmbr, sizeof gzmbr)
-const char * gzm_flgs (uint32_t gzm_flg)
-const char * gzm_oss (uint32_t gzm_os)
-const char * gzm_mtimes (uint32_t gzm_mtime)
+#define GZM_GET(gzmbr) gzm_get(gzmbr, sizeof gzmbr)
+const char * gzm_flgs (uint32_t gzm_flg);
+const char * gzm_oss (uint32_t gzm_os);
+const char * gzm_mtimes (uint32_t gzm_mtime);
 
 int main (int argc, char ** argv)
 {
@@ -26,7 +30,7 @@ int main (int argc, char ** argv)
 
   if (argc < 2)
   {
-    print_usage();
+    printf("usage: %s <filename>\n", argv[0]);
     return 0;
   }
 
@@ -37,7 +41,7 @@ int main (int argc, char ** argv)
     return 1;
   }
 
-  gzipi_show(fp);
+  gzip_show(fp);
 
   fclose(fp);
 
@@ -58,7 +62,7 @@ uint32_t gzm_get (uint8_t * cptr, int sz)
 void gzip_read_member (FILE * fp, gzip_member * gzm)
 {
   int n;
-  n = fread(&gzm, 1, sizeof *gzm, fp);
+  n = fread(gzm, 1, sizeof *gzm, fp);
   if (n != sizeof *gzm)
   {
     fputs("gzipi: read error\n", stderr);
@@ -116,27 +120,31 @@ const char * gzm_oss (uint32_t gzm_os)
   static char s[512];
   switch (gzm_os)
   {
-    case  0: return strcpy(s, "FAT");
-    case  1: return strcpy(s, "Amiga");
-    case  2: return strcpy(s, "VMS");
-    case  3: return strcpy(s, "Unix");
-    case  4: return strcpy(s, "VM/CMS");
-    case  5: return strcpy(s, "Atari TOS");
-    case  6: return strcpy(s, "HPFS");
-    case  7: return strcpy(s, "Macintosh");
-    case  8: return strcpy(s, "Z-System");
-    case  9: return strcpy(s, "CP/M");
-    case 10: return strcpy(s, "TOPS-20");
-    case 11: return strcpy(s, "NTFS");
-    case 12: return strcpy(s, "QDOS");
-    case 13: return strcpy(s, "Acorn RISCOS");
-    default: return strcpy(s, "Unknown");
+    case   0: return strcpy(s, "FAT");
+    case   1: return strcpy(s, "Amiga");
+    case   2: return strcpy(s, "VMS");
+    case   3: return strcpy(s, "Unix");
+    case   4: return strcpy(s, "VM/CMS");
+    case   5: return strcpy(s, "Atari TOS");
+    case   6: return strcpy(s, "HPFS");
+    case   7: return strcpy(s, "Macintosh");
+    case   8: return strcpy(s, "Z-System");
+    case   9: return strcpy(s, "CP/M");
+    case  10: return strcpy(s, "TOPS-20");
+    case  11: return strcpy(s, "NTFS");
+    case  12: return strcpy(s, "QDOS");
+    case  13: return strcpy(s, "Acorn RISCOS");
+    default : return strcpy(s, "Unknown");
   }
 }
 
 const char * gzm_mtimes (uint32_t gzm_mtime)
 {
   static char s[512];
-  return strcpy(s, ctime(gzm_mtime));
+  time_t gzm_mtimet;
+  gzm_mtimet = gzm_mtime;
+  strcpy(s, ctime(&gzm_mtimet));
+  s[24] ^= '\n';
+  return s;
 }
 

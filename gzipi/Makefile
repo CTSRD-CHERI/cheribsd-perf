@@ -1,5 +1,5 @@
 all:
-	cc -o gzipi gzipi.c
+	cc -Wall -o gzipi gzipi.c
 clean:
 	rm -f gzipi
 
