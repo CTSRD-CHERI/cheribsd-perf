@@ -22,6 +22,17 @@ typedef struct
   uint8_t gze_len[2];
 } gzip_extra;
 
+typedef struct
+{
+  uint8_t gzhcrc_crc16[2];
+} gzip_hcrc;
+
+typedef struct
+{
+  uint8_t gzt_crc32[4];
+  uint8_t gzt_isize[4];
+} gzip_trail;
+
 #define GZM_FLG_FTEXT     1
 #define GZM_FLG_FHCRC     2
 #define GZM_FLG_FEXTRA    4
@@ -46,13 +57,18 @@ typedef struct
 void gzip_show (FILE * fp);
 void gzip_read_member (FILE * fp, gzip_member * gzm);
 void gzip_print_member (gzip_member gzm);
-void gzip_read_extra (FILE * fp, gzip_extra * gzm);
-void gzip_print_extra (gzip_extra gzm);
+void gzip_read_extra (FILE * fp, gzip_extra * gze);
+void gzip_print_extra (gzip_extra gze);
+void gzip_read_hcrc (FILE * fp, gzip_hcrc * gzhcrc);
+void gzip_print_hcrc (gzip_hcrc gzhcrc);
+void gzip_read_trail (FILE * fp, gzip_trail * gzt);
+void gzip_print_trail (gzip_trail gzt);
 uint32_t gzm_get (uint8_t * cptr, int sz);
 #define GZM_GET(gzmbr) gzm_get(gzmbr, sizeof gzmbr)
 const char * gzm_flgs (uint32_t gzm_flg);
 const char * gzm_oss (uint32_t gzm_os);
 const char * gzm_mtimes (uint32_t gzm_mtime);
+void print_str (FILE * fp);
 
 int main (int argc, char ** argv)
 {
@@ -123,7 +139,6 @@ void gzip_print_member (gzip_member gzm)
     gzm_os, gzm_oss(gzm_os));
 }
 
-
 void gzip_read_extra (FILE * fp, gzip_extra * gze)
 {
   int n;
@@ -148,12 +163,72 @@ void gzip_print_extra (gzip_extra gze)
     gze_len, SZDIV(gze_len), SZPREFIX(gze_len));
 }
 
+void gzip_read_hcrc (FILE * fp, gzip_hcrc * gzhcrc)
+{
+  int n;
+  n = fread(gzhcrc, 1, sizeof *gzhcrc, fp);
+  if (n != sizeof *gzhcrc)
+  {
+    fputs("gzipi: read error\n", stderr);
+    exit(1);
+  }
+}
+
+void gzip_print_hcrc (gzip_hcrc gzhcrc)
+{
+  printf(
+    "CRC16:     0x%x\n",
+    GZM_GET(gzhcrc.gzhcrc_crc16));
+}
+
+void gzip_read_trail (FILE * fp, gzip_trail * gzt)
+{
+  int n;
+  n = fread(gzt, 1, sizeof *gzt, fp);
+  if (n != sizeof *gzt)
+  {
+    fputs("gzipi: read error\n", stderr);
+    exit(1);
+  }
+}
+
+void gzip_print_trail (gzip_trail gzt)
+{
+  uint32_t gzt_isize;
+  gzt_isize = GZM_GET(gzt.gzt_isize);
+  printf(
+    "CRC32:     0x%x\n"
+    "ISIZE:     0x%x (%u%c)\n",
+    GZM_GET(gzt.gzt_crc32),
+    gzt_isize, SZDIV(gzt_isize), SZPREFIX(gzt_isize));
+}
+
+void print_str (FILE * fp)
+{
+  int c;
+  while (1)
+  {
+    c = fgetc(fp);
+    if (!c) break;
+    if (c == EOF)
+    {
+      if (feof(fp))
+        fputs("gzipi: fgetc: unexpected EOF\n", stderr);
+      else
+        perror("gzipi: fgetc");
+      exit(1);
+    }
+    putchar(c);
+  }
+}
+
 void gzip_show (FILE * fp)
 {
   gzip_member gzm;
   gzip_extra gze;
+  gzip_hcrc gzhcrc;
+  gzip_trail gzt;
   uint32_t gzm_flg;
-  int c;
 
   gzip_read_member(fp, &gzm);
   gzip_print_member(gzm);
@@ -162,6 +237,7 @@ void gzip_show (FILE * fp)
 
   if (gzm_flg & GZM_FLG_FEXTRA)
   {
+    /* untested */
     gzip_read_extra(fp, &gze);
     gzip_print_extra(gze);
     if (fseek(fp, GZM_GET(gze.gze_len), SEEK_CUR))
@@ -174,22 +250,38 @@ void gzip_show (FILE * fp)
   if (gzm_flg & GZM_FLG_FNAME)
   {
     fputs("FILENAME:  ", stdout);
-    while (1)
-    {
-      c = fgetc(fp);
-      if (!c) break;
-      if (c == EOF)
-      {
-        if (feof(fp))
-          fputs("gzipi: fgetc: unexpected EOF\n", stderr);
-        else
-          perror("gzipi: fgetc");
-        exit(1);
-      }
-      putchar(c);
-    }
+    print_str(fp);
     putchar('\n');
   }
+  
+  if (gzm_flg & GZM_FLG_FCOMMENT)
+  {
+    /* untested */
+    fputs("COMMENT:   ", stdout);
+    print_str(fp);
+    putchar('\n');
+  }
+  
+  if (gzm_flg & GZM_FLG_FHCRC)
+  {
+    /* untested */
+    gzip_read_hcrc(fp, &gzhcrc);
+    gzip_print_hcrc(gzhcrc);
+    if (fseek(fp, GZM_GET(gzhcrc.gzhcrc_crc16), SEEK_CUR))
+    {
+      perror("gzipi: fseek");
+      exit(1);
+    }
+  }
+
+  /* trailer */
+  if (fseek(fp, -8, SEEK_END))
+  {
+    perror("gzipi: fseek");
+    exit(1);
+  }
+  gzip_read_trail(fp, &gzt);
+  gzip_print_trail(gzt);
 }
 
 const char * gzm_flgs (uint32_t gzm_flg)
