@@ -1,0 +1,26 @@
+.Dd October 9, 2011
+.Dt GZIPI 1
+.Os
+.Sh NAME
+.Nm gzipi
+.Nd gzip information tool
+.Sh SYNOPSIS
+.Nm
+.Ar file
+.Sh DESCRIPTION
+The
+.Nm
+program shows information about gzip files.
+.Pp
+Currently, only information about the first member of the file is printed.
+.Sh SEE ALSO
+.Xr gzip 1 ,
+.Xr zlib 3
+.Sh AUTHORS
+.An -nosplit
+This implementation of
+.Nm
+was written by
+.An Munraj Vadera Aq Mt mbv21@cam.ac.uk .
+.Sh BUGS
+Information about gzip members with the FEXTRA, FCOMMENT and FHCRC flags set are untested.
