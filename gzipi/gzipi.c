@@ -118,7 +118,7 @@ void gzip_print_member (gzip_member gzm)
     GZM_GET(gzm.gzm_id2),
     GZM_GET(gzm.gzm_cm),
     gzm_flg, gzm_flgs(gzm_flg),
-    gzm_mtime, gzm_mtimes(gzm_flg),
+    gzm_mtime, gzm_mtimes(gzm_mtime),
     GZM_GET(gzm.gzm_xfl),
     gzm_os, gzm_oss(gzm_os));
 }
@@ -151,13 +151,44 @@ void gzip_print_extra (gzip_extra gze)
 void gzip_show (FILE * fp)
 {
   gzip_member gzm;
+  gzip_extra gze;
+  uint32_t gzm_flg;
+  int c;
+
   gzip_read_member(fp, &gzm);
   gzip_print_member(gzm);
-  if (GZM_GET(gzm.gzm_flg) & GZM_FLG_FEXTRA)
+
+  gzm_flg = GZM_GET(gzm.gzm_flg);
+
+  if (gzm_flg & GZM_FLG_FEXTRA)
   {
-    gzip_extra gze;
     gzip_read_extra(fp, &gze);
     gzip_print_extra(gze);
+    if (fseek(fp, GZM_GET(gze.gze_len), SEEK_CUR))
+    {
+      perror("gzipi: fseek");
+      exit(1);
+    }
+  }
+
+  if (gzm_flg & GZM_FLG_FNAME)
+  {
+    fputs("FILENAME:  ", stdout);
+    while (1)
+    {
+      c = fgetc(fp);
+      if (!c) break;
+      if (c == EOF)
+      {
+        if (feof(fp))
+          fputs("gzipi: fgetc: unexpected EOF\n", stderr);
+        else
+          perror("gzipi: fgetc");
+        exit(1);
+      }
+      putchar(c);
+    }
+    putchar('\n');
   }
 }
 
