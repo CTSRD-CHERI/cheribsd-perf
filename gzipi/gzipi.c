@@ -15,9 +15,39 @@ typedef struct
   uint8_t gzm_os[1];
 } gzip_member;
 
+typedef struct
+{
+  uint8_t gze_si1[1];
+  uint8_t gze_si2[1];
+  uint8_t gze_len[2];
+} gzip_extra;
+
+#define GZM_FLG_FTEXT     1
+#define GZM_FLG_FHCRC     2
+#define GZM_FLG_FEXTRA    4
+#define GZM_FLG_FNAME     8
+#define GZM_FLG_FCOMMENT 16
+
+#define SZPREFIX(n) \
+( \
+  (n) >= 1000000000 ? 'G' : \
+  (n) >=    1000000 ? 'M' : \
+  (n) >=       1000 ? 'k' : \
+  ' ' \
+)
+#define SZDIV(n) \
+( \
+  (n) >= 1000000000 ? (n)/1000000000 : \
+  (n) >=    1000000 ? (n)/   1000000 : \
+  (n) >=       1000 ? (n)/      1000 : \
+  (n) \
+)
+
 void gzip_show (FILE * fp);
 void gzip_read_member (FILE * fp, gzip_member * gzm);
 void gzip_print_member (gzip_member gzm);
+void gzip_read_extra (FILE * fp, gzip_extra * gzm);
+void gzip_print_extra (gzip_extra gzm);
 uint32_t gzm_get (uint8_t * cptr, int sz);
 #define GZM_GET(gzmbr) gzm_get(gzmbr, sizeof gzmbr)
 const char * gzm_flgs (uint32_t gzm_flg);
@@ -93,11 +123,42 @@ void gzip_print_member (gzip_member gzm)
     gzm_os, gzm_oss(gzm_os));
 }
 
+
+void gzip_read_extra (FILE * fp, gzip_extra * gze)
+{
+  int n;
+  n = fread(gze, 1, sizeof *gze, fp);
+  if (n != sizeof *gze)
+  {
+    fputs("gzipi: read error\n", stderr);
+    exit(1);
+  }
+}
+
+void gzip_print_extra (gzip_extra gze)
+{
+  uint32_t gze_len;
+  gze_len = GZM_GET(gze.gze_len);
+  printf(
+    "SI1:       0x%x\n"
+    "SI2:       0x%x\n"
+    "LEN:       0x%x (%u%c)\n",
+    GZM_GET(gze.gze_si1),
+    GZM_GET(gze.gze_si2),
+    gze_len, SZDIV(gze_len), SZPREFIX(gze_len));
+}
+
 void gzip_show (FILE * fp)
 {
   gzip_member gzm;
   gzip_read_member(fp, &gzm);
   gzip_print_member(gzm);
+  if (GZM_GET(gzm.gzm_flg) & GZM_FLG_FEXTRA)
+  {
+    gzip_extra gze;
+    gzip_read_extra(fp, &gze);
+    gzip_print_extra(gze);
+  }
 }
 
 const char * gzm_flgs (uint32_t gzm_flg)
@@ -105,11 +166,11 @@ const char * gzm_flgs (uint32_t gzm_flg)
   static char s[512];
   int len;
   strcpy(s, "");
-  if (gzm_flg &  1) strcat(s, "FTEXT, ");
-  if (gzm_flg &  2) strcat(s, "FHCRC, ");
-  if (gzm_flg &  4) strcat(s, "FEXTRA, ");
-  if (gzm_flg &  8) strcat(s, "FNAME, ");
-  if (gzm_flg & 16) strcat(s, "FCOMMENT, ");
+  if (gzm_flg & GZM_FLG_FTEXT)    strcat(s, "FTEXT, ");
+  if (gzm_flg & GZM_FLG_FHCRC)    strcat(s, "FHCRC, ");
+  if (gzm_flg & GZM_FLG_FEXTRA)   strcat(s, "FEXTRA, ");
+  if (gzm_flg & GZM_FLG_FNAME)    strcat(s, "FNAME, ");
+  if (gzm_flg & GZM_FLG_FCOMMENT) strcat(s, "FCOMMENT, ");
   len = strlen(s);
   if (len) s[len-2] = '\0';
   return s;
