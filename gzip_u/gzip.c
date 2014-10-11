@@ -591,7 +591,27 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		origname = "";
 	}
 
-	i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c%c%c%s", 
+  /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
+  if (BUFLEN >= 10)
+  {
+    outbufp[0] = GZIP_MAGIC0;
+    outbufp[1] = GZIP_MAGIC1;
+    outbufp[2] = Z_DEFLATED;
+    outbufp[3] = *origname ? ORIG_NAME : 0;
+    outbufp[4] = mtime & 0xff;
+    outbufp[5] = (mtime >> 8) & 0xff;
+    outbufp[6] = (mtime >> 16) & 0xff;
+    outbufp[7] = (mtime >> 24) & 0xff;
+    outbufp[8] = numflag == 1 ? 4 : numflag == 9 ? 2 : 0;
+    outbufp[9] = OS_CODE;
+    i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", origname);
+  }
+  else
+  {
+    i = 0;
+  }
+
+	/*i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c%c%c%s", 
 		     GZIP_MAGIC0, GZIP_MAGIC1, Z_DEFLATED,
 		     *origname ? ORIG_NAME : 0,
 		     mtime & 0xff,
@@ -599,7 +619,8 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		     (mtime >> 16) & 0xff,
 		     (mtime >> 24) & 0xff,
 		     numflag == 1 ? 4 : numflag == 9 ? 2 : 0,
-		     OS_CODE, origname);
+		     OS_CODE, origname);*/
+
 	if (i >= BUFLEN)     
 		/* this need PATH_MAX > BUFLEN ... */
 		maybe_err("snprintf");
@@ -690,7 +711,25 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		goto out;
 	}
 
-	i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c", 
+  /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
+  if (BUFLEN >= 8)
+  {
+    outbufp[0] = crc & 0xff;
+    outbufp[1] = (crc >> 8) & 0xff;
+    outbufp[2] = (crc >> 16) & 0xff;
+    outbufp[3] = (crc >> 24) & 0xff;
+    outbufp[4] = in_tot & 0xff;
+    outbufp[5] = (in_tot >> 8) & 0xff;
+    outbufp[6] = (in_tot >> 16) & 0xff;
+    outbufp[7] = (in_tot >> 24) & 0xff;
+    i = 8;
+  }
+  else
+  {
+    i = 0;
+  }
+
+	/*i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c", 
 		 (int)crc & 0xff,
 		 (int)(crc >> 8) & 0xff,
 		 (int)(crc >> 16) & 0xff,
@@ -698,7 +737,7 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		 (int)in_tot & 0xff,
 		 (int)(in_tot >> 8) & 0xff,
 		 (int)(in_tot >> 16) & 0xff,
-		 (int)(in_tot >> 24) & 0xff);
+		 (int)(in_tot >> 24) & 0xff);*/
 	if (i != 8)
 		maybe_err("snprintf");
 	if (write(out, outbufp, i) != i) {
