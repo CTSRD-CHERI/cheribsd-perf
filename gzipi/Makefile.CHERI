@@ -1,0 +1,7 @@
+.include "../cheridefs.mk"
+all:
+	$(CC) $(CFLAGS) -Wall -o gzipi gzipi.c $(CPOSTFLAGS)
+clean:
+	rm -f gzipi
+push:
+		scp gzipi $(CHERI_SSH_HOST):~/gzipi
