@@ -1,3 +1,3 @@
 gzip_u:   gzip unmodified
 libz_u:   zlib unmodified
-
+gzip_a:   gzip with capsicum sandboxing
