@@ -65,6 +65,8 @@ __FBSDID("$FreeBSD$");
 #include <getopt.h>
 #include <time.h>
 
+#include "gzip.h"
+
 /* what type of file are we dealing with */
 enum filetype {
 	FT_GZIP,
@@ -194,7 +196,7 @@ static	const char	gzip_copyright[] = \
 static	int	cflag;			/* stdout mode */
 static	int	dflag;			/* decompress mode */
 static	int	lflag;			/* list mode */
-static	int	numflag = 6;		/* gzip -1..-9 value */
+int	numflag = 6;		/* gzip -1..-9 value */
 
 #ifndef SMALL
 static	int	fflag;			/* force mode */
@@ -226,8 +228,6 @@ static	enum filetype file_gettype(u_char *);
 #ifdef SMALL
 #define gz_compress(if, of, sz, fn, tm) gz_compress(if, of, sz)
 #endif
-static	off_t	gz_compress(int, int, off_t *, const char *, uint32_t);
-static	off_t	gz_uncompress(int, int, char *, size_t, off_t *, const char *);
 static	off_t	file_compress(char *, char *, size_t);
 static	off_t	file_uncompress(char *, char *, size_t);
 static	void	handle_pathname(char *);
@@ -257,10 +257,6 @@ static	void	copymodes(int fd, const struct stat *, const char *file);
 static	int	check_outfile(const char *outfile);
 #endif
 
-#ifndef NO_BZIP2_SUPPORT
-static	off_t	unbzip2(int, int, char *, size_t, off_t *);
-#endif
-
 #ifndef NO_COMPRESS_SUPPORT
 static	FILE 	*zdopen(int);
 static	off_t	zuncompress(FILE *, FILE *, char *, size_t, off_t *);
@@ -272,6 +268,11 @@ static	off_t	unpack(int, int, char *, size_t, off_t *);
 
 #ifndef NO_XZ_SUPPORT
 static	off_t	unxz(int, int, char *, size_t, off_t *);
+#endif
+
+#ifndef NO_SANDBOX_SUPPORT
+int ld_insandbox(void);
+int gzsandbox(void);
 #endif
 
 #ifdef SMALL
@@ -311,6 +312,11 @@ main(int argc, char **argv)
 	int len;
 #endif
 	int ch;
+
+
+#ifndef NO_SANDBOX_SUPPORT
+	if (ld_insandbox()) return gzsandbox();
+#endif
 
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)
@@ -555,7 +561,7 @@ copy_done:
 #endif
 
 /* compress input to output. Return bytes read, -1 on error */
-static off_t
+off_t
 gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime)
 {
 	z_stream z;
@@ -761,7 +767,7 @@ out:
  * uncompressed size written, and put the compressed sized read
  * into `*gsizep'.
  */
-static off_t
+off_t
 gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 	      const char *filename)
 {
@@ -1337,7 +1343,7 @@ file_compress(char *file, char *outfile, size_t outsize)
 	} else
 		out = STDOUT_FILENO;
 
-	insize = gz_compress(in, out, &size, basename(file), (uint32_t)isb.st_mtime);
+	insize = gz_compress_wrapper(in, out, &size, basename(file), (uint32_t)isb.st_mtime);
 
 	(void)close(in);
 
@@ -1515,7 +1521,7 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 			goto lose;
 		}
 
-		size = unbzip2(fd, zfd, NULL, 0, NULL);
+		size = unbzip2_wrapper(fd, zfd, NULL, 0, NULL);
 		break;
 #endif
 
@@ -1595,7 +1601,7 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 			return -1;	/* XXX */
 		}
 
-		size = gz_uncompress(fd, zfd, NULL, 0, NULL, file);
+		size = gz_uncompress_wrapper(fd, zfd, NULL, 0, NULL, file);
 		break;
 	}
 
@@ -1753,12 +1759,12 @@ handle_stdin(void)
 		break;
 #endif
 	case FT_GZIP:
-		usize = gz_uncompress(STDIN_FILENO, STDOUT_FILENO, 
+		usize = gz_uncompress_wrapper(STDIN_FILENO, STDOUT_FILENO, 
 			      (char *)header1, sizeof header1, &gsize, "(stdin)");
 		break;
 #ifndef NO_BZIP2_SUPPORT
 	case FT_BZIP2:
-		usize = unbzip2(STDIN_FILENO, STDOUT_FILENO,
+		usize = unbzip2_wrapper(STDIN_FILENO, STDOUT_FILENO,
 				(char *)header1, sizeof header1, &gsize);
 		break;
 #endif
@@ -1835,7 +1841,7 @@ handle_stdout(void)
 		mtime = (uint32_t)systime;
 	}
 	 		
-	usize = gz_compress(STDIN_FILENO, STDOUT_FILENO, &gsize, "", mtime);
+	usize = gz_compress_wrapper(STDIN_FILENO, STDOUT_FILENO, &gsize, "", mtime);
 #ifndef SMALL
         if (vflag && !tflag && usize != -1 && gsize != -1)
 		print_verbage(NULL, NULL, usize, gsize);
