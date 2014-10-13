@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: projects/capabilities8/usr.bin/gzip/gzsandbox.c 208664 2010-
 #include <errno.h>
 #include <fcntl.h>
 #include <libcapsicum.h>
+#include <libcapsicum8.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
