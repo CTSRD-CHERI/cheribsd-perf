@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: projects/capabilities8/usr.bin/gzip/gzsandbox.c 208664 2010-
 
 #ifndef NO_SANDBOX_SUPPORT
 
-int	gzsandbox(void);
+int	gzsandbox(void *);
 
 static char *lc_sandbox_argv[] = { __DECONST(char *, LC_USR_BIN_GZIP_SANDBOX),
 				    NULL };
@@ -71,8 +71,6 @@ static int			 gzsandbox_enabled;
 static void
 gzsandbox_initialize(void)
 {
-  int pid;
-
 	if (gzsandbox_initialized)
 		return;
 	gzsandbox_enabled = 1;
@@ -80,22 +78,9 @@ gzsandbox_initialize(void)
 	if (!gzsandbox_enabled)
 		return;
 
-  pid = fork();
-  if (pid < 0)
-  {
-    perror("fork");
-    exit(1);
-  }
-
-  /* child */
-  if (!pid)
-  {
-    if (cap_enter())
-    {
-      perror("cap_enter");
-      _Exit(1);
-    }
-  }
+  if (lch_startfn(gzsandbox, lc_sandbox_argv,
+      LCH_PERMIT_STDERR, &lcsp) < 0)
+    err(-1, "lch_startfn %s", LC_USR_BIN_GZIP_SANDBOX);
 }
 
 struct host_gz_compress_req {
@@ -355,7 +340,7 @@ unbzip2_wrapper(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 /*
  * Main entry point for capability-mode 
  */
-int gzsandbox(void)
+int gzsandbox(void * context)
 {
 	int fdarray[2], fdcount;
 	struct lc_host *lchp;
@@ -408,6 +393,7 @@ int gzsandbox(void)
 		}
 		free(buffer);
 	}
+  (void) context;
 }
 
 #else /* NO_SANDBOX_SUPPORT */

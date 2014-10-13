@@ -272,7 +272,7 @@ static	off_t	unxz(int, int, char *, size_t, off_t *);
 
 #ifndef NO_SANDBOX_SUPPORT
 int ld_insandbox(void);
-int gzsandbox(void);
+int gzsandbox(void *);
 #endif
 
 #ifdef SMALL
@@ -312,11 +312,6 @@ main(int argc, char **argv)
 	int len;
 #endif
 	int ch;
-
-
-#ifndef NO_SANDBOX_SUPPORT
-	if (ld_insandbox()) return gzsandbox();
-#endif
 
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)

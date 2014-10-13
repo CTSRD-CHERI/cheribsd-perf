@@ -10,10 +10,30 @@
 #include "sandbox_rpc.h"
 #include "sandbox.h"
 
-void
-sandbox_create(struct sandbox_cb *scb, void  (*sandbox_mainfn)(void))
+int
+lch_startfn (int (*fn_sandbox) (void *), void *context, u_int flags, struct lc_sandbox **lcsp)
 {
+  struct sandbox_cb * scb;
+  scb = calloc(1, sizeof(struct sandbox_cb));
+  if (scb == NULL)
+    return -1;
+  sandbox_create(scb, fn_sandbox, context);
+  *lcsp = scb;
+  return 0;
+}
 
+static sandbox_cb * global_scb;
+
+int
+lcs_get (struct lc_host ** lchpp)
+{
+  *lchpp = global_scb;
+  return 0;
+}
+
+void
+sandbox_create(struct sandbox_cb *scb, int  (*sandbox_mainfn)(void * context), void * context)
+{
 	int pid, fd_sockpair[2];
 
 	/* Establish a socket pair for host-sandbox */
@@ -34,14 +54,23 @@ sandbox_create(struct sandbox_cb *scb, void  (*sandbox_mainfn)(void))
 		exit(1);
 	}
 
+  global_scb = scb;
+
 	/* Child-Sandbox */
 	if(!pid) {
-		sandbox_mainfn();
-		exit (0); /* Default action exit */
+    if (cap_enter())
+    {
+      perror("cap_enter");
+      _Exit(1);
+    }
+    /* TODO: limit fd_host_end? */
+    _Exit(sandbox_mainfn(context));
 	}
-
-	/* Update sandbox pid in control block */
-	scb->sandbox_pid = pid;
+  else
+  {
+    /* Update sandbox pid in control block */
+    scb->sandbox_pid = pid;
+  }
 }
 
 /* Simple I/O wrappers. */
