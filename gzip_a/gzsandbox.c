@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: projects/capabilities8/usr.bin/gzip/gzsandbox.c 208664 2010-
 #include <fcntl.h>
 #include <libcapsicum.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -69,17 +70,31 @@ static int			 gzsandbox_enabled;
 static void
 gzsandbox_initialize(void)
 {
+  int pid;
 
 	if (gzsandbox_initialized)
 		return;
-	gzsandbox_enabled = lch_autosandbox_isenabled("gzip");
+	gzsandbox_enabled = 1;
 	gzsandbox_initialized = 1;
 	if (!gzsandbox_enabled)
 		return;
 
-	if (lch_start(LC_USR_BIN_GZIP_SANDBOX, lc_sandbox_argv,
-	    LCH_PERMIT_STDERR, NULL, &lcsp) < 0)
-		err(-1, "lch_start %s", LC_USR_BIN_GZIP_SANDBOX);
+  pid = fork();
+  if (pid < 0)
+  {
+    perror("fork");
+    exit(1);
+  }
+
+  /* child */
+  if (!pid)
+  {
+    if (cap_enter())
+    {
+      perror("cap_enter");
+      _Exit(1);
+    }
+  }
 }
 
 struct host_gz_compress_req {
