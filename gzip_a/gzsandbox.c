@@ -256,6 +256,7 @@ gz_uncompress_wrapper(int in, int out, char *pre, size_t prelen,
 		    filename));
 }
 
+#ifndef NO_BZIP2_SUPPORT
 struct host_unbzip2_req {
 	size_t	hub_req_prelen;
 	/* ... followed by data ... */
@@ -336,6 +337,7 @@ unbzip2_wrapper(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	else
 		return (unbzip2(in, out, pre, prelen, bytes_in));
 }
+#endif /* !NO_BZIP2_SUPPORT */
 
 /*
  * Main entry point for capability-mode 
@@ -379,6 +381,7 @@ int gzsandbox(void * context)
 			close(fdarray[1]);
 			break;
 
+#ifndef NO_BZIP2_SUPPORT
 		case PROXIED_UNBZIP2:
 			if (fdcount != 2)
 				errx(-1, "sandbox_workloop: %d fds", fdcount);
@@ -387,6 +390,7 @@ int gzsandbox(void * context)
 			close(fdarray[0]);
 			close(fdarray[1]);
 			break;
+#endif /* !NO_BZIP2_SUPPORT */
 
 		default:
 			errx(-1, "sandbox_workloop: unknown op %d", opno);

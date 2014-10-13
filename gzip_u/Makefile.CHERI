@@ -36,4 +36,4 @@ LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 .include <bsd.prog.mk>
 
 push:
-		scp gzip $(CHERI_SSH_HOST):~/gzip
+		scp gzip $(CHERI_SSH_HOST):~/gzip_u

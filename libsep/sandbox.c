@@ -10,6 +10,11 @@
 #include "sandbox_rpc.h"
 #include "sandbox.h"
 
+#define IN_LIBSEP_LIB
+#include "libcapsicum8.h"
+
+#include <sys/capability.h>
+
 int
 lch_startfn (int (*fn_sandbox) (void *), void *context, u_int flags, struct lc_sandbox **lcsp)
 {
@@ -19,10 +24,11 @@ lch_startfn (int (*fn_sandbox) (void *), void *context, u_int flags, struct lc_s
     return -1;
   sandbox_create(scb, fn_sandbox, context);
   *lcsp = scb;
+  (void) flags;
   return 0;
 }
 
-static sandbox_cb * global_scb;
+static struct sandbox_cb * global_scb;
 
 int
 lcs_get (struct lc_host ** lchpp)
@@ -32,7 +38,7 @@ lcs_get (struct lc_host ** lchpp)
 }
 
 void
-sandbox_create(struct sandbox_cb *scb, int  (*sandbox_mainfn)(void * context), void * context)
+sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), void * context)
 {
 	int pid, fd_sockpair[2];
 

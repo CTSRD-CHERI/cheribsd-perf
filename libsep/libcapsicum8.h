@@ -5,7 +5,11 @@
  * (FreeBSD 8.0) libcapsicum API, implemented via libsep.
  */
 
+#ifdef IN_LIBSEP_LIB
+#include "sandbox.h"
+#else
 #include <sandbox.h>
+#endif
 
 #define lc_sandbox          sandbox_cb
 #define lc_host             sandbox_cb

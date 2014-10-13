@@ -39,7 +39,7 @@ struct sandboxrpc_reply_hdr {
 
 #include <sys/uio.h>
 /* Prototypes */
-void sandbox_create(struct sandbox_cb *scb, void (*sandbox_mainfn)(void));
+void sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void*), void * context);
 
 ssize_t host_recv(struct sandbox_cb *scb, void *buf, size_t len, int flags);
 ssize_t host_recv_rights(struct sandbox_cb *scb, void *buf, size_t len, int
