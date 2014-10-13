@@ -127,10 +127,14 @@ gz_compress_insandbox(int in, int out, off_t *gsizep, const char *origname,
 	iov_req.iov_len = sizeof(req);
 	iov_rep.iov_base = &rep;
 	iov_rep.iov_len = sizeof(rep);
-	fdarray[0] = cap_new(in, CAP_FSTAT | CAP_READ | CAP_SEEK);
-	fdarray[1] = cap_new(out, CAP_FSTAT | CAP_WRITE | CAP_SEEK);
-	if (fdarray[0] == -1 || fdarray[1] == -1)
-		err(-1, "cap_new");
+  cap_rights_t in_rights, out_rights;
+  cap_rights_init(&in_rights, CAP_FSTAT, CAP_READ, CAP_SEEK);
+  cap_rights_init(&out_rights, CAP_FSTAT, CAP_WRITE, CAP_SEEK);
+  if (cap_rights_limit(in, &in_rights) ||
+      cap_rights_limit(out, &out_rights))
+    err(-1, "cap_rights_limit");
+	fdarray[0] = in;
+	fdarray[1] = out;
 	if (lch_rpc_rights(lcsp, PROXIED_GZ_COMPRESS, &iov_req, 1,
 	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
 		err(-1, "lch_rpc_rights");
@@ -209,10 +213,14 @@ gz_uncompress_insandbox(int in, int out, char *pre, size_t prelen,
 	iov_req[1].iov_len = prelen;
 	iov_rep.iov_base = &rep;
 	iov_rep.iov_len = sizeof(rep);
-	fdarray[0] = cap_new(in, CAP_FSTAT | CAP_READ | CAP_SEEK);
-	fdarray[1] = cap_new(out, CAP_FSTAT | CAP_WRITE | CAP_SEEK);
-	if (fdarray[0] == -1 || fdarray[1] == -1)
-		err(-1, "cap_new");
+  cap_rights_t in_rights, out_rights;
+  cap_rights_init(&in_rights, CAP_FSTAT, CAP_READ, CAP_SEEK);
+  cap_rights_init(&out_rights, CAP_FSTAT, CAP_WRITE, CAP_SEEK);
+  if (cap_rights_limit(in, &in_rights) ||
+      cap_rights_limit(out, &out_rights))
+    err(-1, "cap_rights_limit");
+	fdarray[0] = in;
+	fdarray[1] = out;
 	if (lch_rpc_rights(lcsp, PROXIED_GZ_UNCOMPRESS, iov_req, 1,
 	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
 		err(-1, "lch_rpc_rights");
@@ -289,10 +297,14 @@ unbzip2_insandbox(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	iov_req[1].iov_len = prelen;
 	iov_rep.iov_base = &rep;
 	iov_rep.iov_len = sizeof(rep);
-	fdarray[0] = cap_new(in, CAP_FSTAT | CAP_READ | CAP_SEEK);
-	fdarray[1] = cap_new(out, CAP_FSTAT | CAP_WRITE | CAP_SEEK);
-	if (fdarray[0] == -1 || fdarray[1] == -1)
-		err(-1, "cap_new");
+  cap_rights_t in_rights, out_rights;
+  cap_rights_init(&in_rights, CAP_FSTAT, CAP_READ, CAP_SEEK);
+  cap_rights_init(&out_rights, CAP_FSTAT, CAP_WRITE, CAP_SEEK);
+  if (cap_rights_limit(in, &in_rights) ||
+      cap_rights_limit(out, &out_rights))
+    err(-1, "cap_rights_limit");
+	fdarray[0] = in;
+	fdarray[1] = out;
 	if (lch_rpc_rights(lcsp, PROXIED_UNBZIP2, iov_req, 1,
 	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
 		err(-1, "lch_rpc_rights");
