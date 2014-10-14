@@ -7,10 +7,11 @@ PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 SRCS=   gzip.c gzsandbox.c
 
-DPADD=		${LIBZ} ${LIBLZMA} ${LIBCAPSICUM}
-LDADD=		-lz -llzma -lcapsicum
+DPADD=		${LIBZ} ${LIBLZMA}
+LDADD=		-lz -llzma ../libsep/libsep.a
 WARNS?=   6
 CFLAGS+=	-rdynamic			# For sandbox cap_main
+CFLAGS+=  -I../libsep/
 
 .if ${MK_BZIP2_SUPPORT} != "no"
 DPADD+=		${LIBBZ2}

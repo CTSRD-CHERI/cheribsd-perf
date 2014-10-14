@@ -9,11 +9,12 @@ PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 SRCS=   gzip.c gzsandbox.c
 
-DPADD=		${LIBZ} ${LIBLZMA} ${LIBCAPSICUM}
-LDADD=		../libz_u/libz.a -lcapsicum ../libsep/libsep.a
+DPADD=		${LIBZ} ${LIBLZMA}
+LDADD=		../libz_u/libz.a ../libsep/libsep.a
 WARNS?=   6
 CFLAGS+=	-rdynamic			# For sandbox cap_main
 CFLAGS+=  -I../libsep/
+CFLAGS+=  -g
 
 CFLAGS+=-DNO_XZ_SUPPORT
 

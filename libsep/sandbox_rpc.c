@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 
+#include <stdio.h>
 #include <strings.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -42,9 +43,11 @@ _sandbox_rpc_receive_rights(struct msghdr *msg, int *fdp, int *fdcountp)
 			continue;
 		/* XXX IM: recheck this! */
 		/*fdcount += (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);*/
-		fdcount++;
+		/*fdcount++;*/
+		fdcount += (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
 		scmrightscount++;
 	}
+  printf("[%d] received %d fds\n", getpid(), fdcount);
 
 	if (scmrightscount > 1 || fdcount > *fdcountp) {
 		for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
@@ -137,6 +140,8 @@ _sandbox_rpc_send_rights(int fd, const void *msg, size_t len, int flags, int
 	do {
 		retlen = sendmsg(fd, &msghdr, flags);
 	} while (retlen < 0 && errno == EINTR);
+
+  printf("[%d] sent %d fds\n", getpid(), fdcount);
 
 	return (retlen);
 }

@@ -3,6 +3,7 @@
 
 /* Compatibility layer between the new (FreeBSD 10+) and old
  * (FreeBSD 8.0) libcapsicum API, implemented via libsep.
+ * (The new API is available via sys/capability.h.)
  */
 
 #ifdef IN_LIBSEP_LIB

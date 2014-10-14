@@ -70,7 +70,10 @@ sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), vo
       _Exit(1);
     }
     /* TODO: limit fd_host_end? */
-    _Exit(sandbox_mainfn(context));
+    //close(scb->fd_host_end);
+    int rc = sandbox_mainfn(context);
+    printf("mainfn returned %d\n", rc);
+    _Exit(rc);
 	}
   else
   {
@@ -307,6 +310,8 @@ host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 		return (-1);
 	}
 
+  printf("[%d]: received rpc from sandbox\n", getpid());
+
 	if (rep_hdr.sandboxrpc_rephdr_magic != SANDBOX_RPC_REPLY_HDR_MAGIC ||
 	    rep_hdr.sandboxrpc_rephdr_seqno != 0 ||
 	    rep_hdr.sandboxrpc_rephdr_opno != opno ||
@@ -534,6 +539,7 @@ static int
 sandbox_sendrpc_internal(struct sandbox_cb *scb, u_int32_t opno, u_int32_t seqno,
     struct iovec *rep, int repcount, int *fdp, int fdcount)
 {
+  printf("[%d] sending response rpc\n", getpid());
 	struct sandboxrpc_reply_hdr rep_hdr;
 	ssize_t len;
 	int i;

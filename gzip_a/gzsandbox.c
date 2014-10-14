@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: projects/capabilities8/usr.bin/gzip/gzsandbox.c 208664 2010-
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libcapsicum.h>
 #include <libcapsicum8.h>
 #include <limits.h>
 #include <stdio.h>
@@ -130,6 +129,7 @@ gz_compress_insandbox(int in, int out, off_t *gsizep, const char *origname,
 		*gsizep = rep.hgc_rep_gsize;
 	close(fdarray[0]);
 	close(fdarray[1]);
+  printf("[%d] (parent) finished compressing\n", getpid());
 	return (rep.hgc_rep_retval);
 }
 
@@ -149,10 +149,12 @@ sandbox_gz_compress_buffer(struct lc_host *lchp, uint32_t opno,
 	numflag = req.hgc_req_numflag;
 	rep.hgc_rep_retval = gz_compress(fd_in, fd_out, &rep.hgc_rep_gsize,
 	    req.hgc_req_origname, req.hgc_req_mtime);
+  warnx("compression complete");
 	iov.iov_base = &rep;
 	iov.iov_len = sizeof(rep);
 	if (lcs_sendrpc(lchp, opno, seqno, &iov, 1) < 0)
 		err(-1, "lcs_sendrpc");
+  warnx("sent response rpc");
 }
 
 off_t
@@ -364,10 +366,12 @@ int gzsandbox(void * context)
 		}
 		switch (opno) {
 		case PROXIED_GZ_COMPRESS:
+      warnx("proxied gz compress\n");
 			if (fdcount != 2)
 				errx(-1, "sandbox_workloop: %d fds", fdcount);
 			sandbox_gz_compress_buffer(lchp, opno, seqno, buffer,
 			    len, fdarray[0], fdarray[1]);
+      printf("sandbox: will leave now\n");
 			close(fdarray[0]);
 			close(fdarray[1]);
 			break;
@@ -397,7 +401,10 @@ int gzsandbox(void * context)
 		}
 		free(buffer);
 	}
+  printf("(will return from mainfn)\n");
   (void) context;
+  printf("(return from mainfn)\n");
+  return 0;
 }
 
 #else /* NO_SANDBOX_SUPPORT */
