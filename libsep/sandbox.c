@@ -16,6 +16,21 @@
 #include <sys/capability.h>
 
 int
+cap_new (int fd, cap_rights_t rights)
+{
+  int fdc;
+  fdc = dup(fd);
+  if (fdc == -1)
+    return -1;
+  if (cap_rights_limit(fdc, &rights) == -1)
+  {
+    close(fdc);
+    return -1;
+  }
+  return fdc;
+}
+
+int
 lch_startfn (int (*fn_sandbox) (void *), void *context, u_int flags, struct lc_sandbox **lcsp)
 {
   struct sandbox_cb * scb;

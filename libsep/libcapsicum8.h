@@ -15,6 +15,13 @@
 #define lc_sandbox          sandbox_cb
 #define lc_host             sandbox_cb
 
+/* behaviour is not exactly as in the old API; the cap_rights_t
+ * structure should be initialized using cap_rights_init rather
+ * than directly via bitwise OR.
+ */
+int
+cap_new (int fd, cap_rights_t rights);
+
 /* lch_startfn is akin to lch_start and lch_startfd, which took a
  * filename and file descriptor, respectively. fn_sandbox is called
  * after entering capability mode. The flags are ignored. lcsp is
