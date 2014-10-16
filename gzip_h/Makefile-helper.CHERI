@@ -7,6 +7,8 @@
 
 PROG=		gzsandbox-helper
 SRCS=   gzsandbox-helper.c
+INCS=
+MK_MAN=no
 
 LDFLAGS+=	-Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib
 
@@ -37,4 +39,7 @@ gzsandbox-helper.bin: gzsandbox-helper
 	$(CHERI_SDK)/bin/objcopy -S -O binary ${.ALLSRC} ${.TARGET}
 
 .include <bsd.prog.mk>
+
+push:
+		scp gzsandbox-helper.bin $(CHERI_SSH_HOST):~/gzsandbox-helper.bin
 

@@ -164,7 +164,7 @@ static suffixes_t suffixes[] = {
 #define GIT_COMMIT_STRING "(unknown revision)"
 #endif // GIT_COMMIT_STRING
 
-static	const char	gzip_version[] = "FreeBSD gzip 20111009 (CHERI, gzip_u, " GIT_COMMIT_STRING ")";
+static	const char	gzip_version[] = "FreeBSD gzip 20111009 (CHERI, gzip_a, " GIT_COMMIT_STRING ")";
 
 #ifndef SMALL
 static	const char	gzip_copyright[] = \
