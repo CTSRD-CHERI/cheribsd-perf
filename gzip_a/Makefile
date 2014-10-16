@@ -8,11 +8,13 @@ MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 SRCS=   gzip.c gzsandbox.c
 
 DPADD=		${LIBZ} ${LIBLZMA}
-LDADD=		-lz -llzma ../libsep/libsep.a
+LDADD=		../libz_u/libz.a ../libsep/libsep.a
 WARNS?=   6
 CFLAGS+=	-rdynamic			# For sandbox cap_main
 CFLAGS+=  -I../libsep/
 
+CFLAGS+=-DNO_XZ_SUPPORT
+MK_BZIP2_SUPPORT=no
 .if ${MK_BZIP2_SUPPORT} != "no"
 DPADD+=		${LIBBZ2}
 LDADD+=		-lbz2
