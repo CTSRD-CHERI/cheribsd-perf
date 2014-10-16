@@ -10,7 +10,8 @@ MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 SRCS=   gzip.c gzsandbox.c
 
 DPADD=		${LIBZ} ${LIBLZMA} ${LIBCHERI}
-LDADD=		../libz_u/libz.a -lcheri
+#LDADD=		../libz_u/libz.a -lcheri
+LDADD=		../libz_u/libz.a ../libcheri_u/libcheri.a
 WARNS?=   6
 CFLAGS+=	-rdynamic			# For sandbox cap_main
 CFLAGS+=  -g

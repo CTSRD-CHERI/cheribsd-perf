@@ -9,3 +9,5 @@ CFLAGS+=--sysroot=$(CHERI_SDK) -DGIT_COMMIT_STRING=$(GIT_COMMIT_STRING)
 CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 
 CHERI_SSH_HOST:=oregano
+
+MACHINE_ARCH=mips64

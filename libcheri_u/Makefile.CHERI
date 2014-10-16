@@ -1,5 +1,7 @@
 # $FreeBSD$
 
+.include "../cheridefs.mk"
+
 LIB=	cheri
 SRCS=	cheri_invoke.S			\
 	cheri_enter.c			\

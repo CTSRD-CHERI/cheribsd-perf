@@ -14,7 +14,8 @@ LDFLAGS+=	-Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib
 
 DPADD=		${LIBZ} ${LIBC_CHERI}
 #LDADD=		../libz_u/libz.a -lc_cheri
-LDADD=		-lc_cheri
+#LDADD=		-lc_cheri
+LDADD=    ../libc_cheri_u/libc_cheri.a
 WARNS?=   6
 
 CFLAGS+=-DNO_XZ_SUPPORT
