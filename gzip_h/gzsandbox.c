@@ -20,6 +20,32 @@ static int			 gzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
 
+void
+gzsandbox_test(void);
+static void
+gzsandbox_initialize(void);
+#include "gzsandbox-helper.h"
+#include <machine/cheri.h>
+#include <machine/cheric.h>
+#include <cheri/sandbox.h>
+
+#define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
+
+void
+gzsandbox_test(void)
+{
+  register_t v;
+  printf("initializing...\n");
+  gzsandbox_initialize();
+  printf("invoking...\n");
+  v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
+            0, 0, 0, 0, 0, 0, 0,
+            cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap());
+  printf("invoked.\n");
+}
+
 static void
 gzsandbox_initialize(void)
 {
@@ -27,12 +53,11 @@ gzsandbox_initialize(void)
 		return;
 	gzsandbox_initialized = 1;
 
-  if (sandbox_class_new(GZIP_SANDBOX_BIN, 1048576, &sbcp))
+  if (sandbox_class_new(GZIP_SANDBOX_BIN, 4*1048576, &sbcp))
     err(-1, "sandbox_class_new %s", GZIP_SANDBOX_BIN);
 
   if (sandbox_object_new(sbcp, &sbop))
     err(-1, "sandbox_object_new");
-
 }
 
 off_t
