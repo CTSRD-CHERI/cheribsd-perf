@@ -45,7 +45,6 @@ gzsandbox_test(void)
   if (cheri_fd_new(STDERR_FILENO, &stderr_fd) < 0)
     err(-1, "cheri_fd_new: stderr");
   
-
   printf("invoking...\n");
   v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
             0, 0, 0, 0, 0, 0, 0,

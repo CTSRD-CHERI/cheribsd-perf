@@ -15,13 +15,28 @@ int invoke(register_t op, __capability void * co_codecap, __capability void * co
 #define CHERI_STR_PTR(str)  cheri_ptr((void*)(str), 1+lenstr((str)))
 
 size_t lenstr (const char * str);
+char * cpystr (char * dst, const char * src);
+
 size_t lenstr (const char * str)
 {
-  size_t len = 0;
+  size_t len;
+  len = 0;
   while (*str)
     str++, len++;
   return len;
 }
+
+char * cpystr (char * dst, const char * src)
+{
+  char * p;
+  p = dst;
+  while (*src)
+    *(p++) = *(src++);
+  *p = 0;
+  return dst;
+}
+
+static char buf[512];
 
 int
 invoke(register_t op, __capability void * co_codecap, __capability void * co_datacap)
@@ -31,10 +46,10 @@ invoke(register_t op, __capability void * co_codecap, __capability void * co_dat
   fd_object.co_codecap = co_codecap;
   fd_object.co_datacap = co_datacap;
 
-  static const char * msg = "in invoke()!\n";
+  cpystr(buf, "in invoke()!\n");
 
   /* write to stderr */
-  cheri_fd_write_c(fd_object, CHERI_STR_PTR(msg));
+  cheri_fd_write_c(fd_object, CHERI_STR_PTR(buf));
 
   /* no stdlib */ /*fprintf(stderr, "in invoke()!\n");*/
   /*cheri_system_puts(CHERI_STR_PTR("in invoke()!\n"));*/
