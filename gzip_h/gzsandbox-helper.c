@@ -10,20 +10,35 @@
 extern __capability void	*cheri_system_type;
 #include <cheri/cheri_system.h>
 
-#include <stdio.h>
-#include <string.h>
+int invoke(register_t op, __capability void * co_codecap, __capability void * co_datacap);
 
-int	invoke(register_t op, struct cheri_object system_object,
-      struct cheri_object fd_object);
+#define CHERI_STR_PTR(str)  cheri_ptr((void*)(str), 1+lenstr((str)))
 
+size_t lenstr (const char * str);
+size_t lenstr (const char * str)
+{
+  size_t len = 0;
+  while (*str)
+    str++, len++;
+  return len;
+}
 
 int
-invoke(register_t op, struct cheri_object system_object,
-    struct cheri_object fd_object)
+invoke(register_t op, __capability void * co_codecap, __capability void * co_datacap)
 {
-  fprintf(stderr, "in invoke()!\n");
+  /* reconstruct the cheri_object */
+  struct cheri_object fd_object;
+  fd_object.co_codecap = co_codecap;
+  fd_object.co_datacap = co_datacap;
+
+  static const char * msg = "in invoke()!\n";
+
+  /* write to stderr */
+  cheri_fd_write_c(fd_object, CHERI_STR_PTR(msg));
+
+  /* no stdlib */ /*fprintf(stderr, "in invoke()!\n");*/
+  /*cheri_system_puts(CHERI_STR_PTR("in invoke()!\n"));*/
   (void) op;
-  (void) system_object;
   (void) fd_object;
   return 0x5678;
 }

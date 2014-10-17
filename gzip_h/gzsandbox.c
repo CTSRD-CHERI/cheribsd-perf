@@ -27,6 +27,7 @@ gzsandbox_initialize(void);
 #include "gzsandbox-helper.h"
 #include <machine/cheri.h>
 #include <machine/cheric.h>
+#include <cheri/cheri_fd.h>
 #include <cheri/sandbox.h>
 
 #define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
@@ -35,12 +36,20 @@ void
 gzsandbox_test(void)
 {
   register_t v;
+  struct cheri_object stderr_fd;
+
   printf("initializing...\n");
   gzsandbox_initialize();
+
+  /* create cheri_fd for STDERR */
+  if (cheri_fd_new(STDERR_FILENO, &stderr_fd) < 0)
+    err(-1, "cheri_fd_new: stderr");
+  
+
   printf("invoking...\n");
   v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
             0, 0, 0, 0, 0, 0, 0,
-            cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+            stderr_fd.co_codecap, stderr_fd.co_datacap, cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
   printf("invoked.\n");

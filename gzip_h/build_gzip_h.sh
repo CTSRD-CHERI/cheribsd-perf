@@ -1,4 +1,4 @@
-pushd ../libsep && \
+pushd ../libcheri_u && \
 make -f Makefile.CHERI clean all && \
 popd && \
 pushd ../libz_u && \

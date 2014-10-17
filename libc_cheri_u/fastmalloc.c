@@ -44,7 +44,7 @@
 
 register_t  _sb_heapbase;
 size_t	 _sb_heaplen;
-void	*_sb_heapcap;
+__capability void	*_sb_heapcap;
 
 #define	MALLOC_ALIGN	sizeof(__capability void *)
 
@@ -52,7 +52,7 @@ void *
 malloc(size_t size)
 {
 	size_t rsize;
-	char *ptr;
+	__capability char *ptr;
 
 	if (_sb_heapcap == NULL) {
 		_sb_heapcap = cheri_setlen(
@@ -88,7 +88,7 @@ malloc(size_t size)
 	    cheri_getbase(ptr), cheri_getoffset(ptr), cheri_getlen(ptr));
 #endif
 
-	return(ptr);
+	return((void*)cheri_getbase(ptr));
 }
 
 void

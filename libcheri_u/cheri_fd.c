@@ -276,6 +276,10 @@ _cheri_fd_write_c(__capability const void *buf_c)
 	}
 
 	/* Forward to operating system. */
+  printf("_cheri_fd_write_c: note: writing to fd %d\n", cfp->cf_fd);
+  printf("_cheri_fd_write_c: note: buf is %p, len is %d\n", buf, (signed) cheri_getlen(buf_c));
+  printf("_cheri_fd_write_c: note: buf is %s\n", buf);
+  printf("_cheri_fd_write_c: calling write...\n");
 	ret.cfr_retval0 = write(cfp->cf_fd, buf, cheri_getlen(buf_c));
 	ret.cfr_retval1 = (ret.cfr_retval0 < 0 ? errno : 0);
 	return (ret);
@@ -299,6 +303,10 @@ cheri_fd_enter(register_t methodnum, register_t a1, register_t a2,
     struct cheri_object co __unused, __capability void *c3)
 {
 	struct cheri_fd_ret ret;
+
+  printf("cheri_fd_enter: methodnum = %d\n", (signed) methodnum);
+  printf("cheri_fd_enter: c3.base=%p, c3.len=%d, c3.offset=%p\n", (void*)c3, (signed)cheri_getlen(c3), cheri_getoffset(c3));
+  printf("first byte at c3.base: %c\n", *(char*)c3);
 
 	switch (methodnum) {
 	case CHERI_FD_METHOD_FSTAT_C:
