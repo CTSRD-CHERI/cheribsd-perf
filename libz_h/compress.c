@@ -7,6 +7,8 @@
 
 #define ZLIB_INTERNAL
 #include "zlib.h"
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 /* ===========================================================================
      Compresses the source buffer into the destination buffer. The level
@@ -37,7 +39,7 @@ int ZEXPORT compress2 (dest, destLen, source, sourceLen, level)
     if ((uLong)stream.avail_in != sourceLen) return Z_BUF_ERROR;
 #endif
     stream.next_out =
-      cheri_ptrperm((void *) dest, destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
+      cheri_ptrperm((void *) dest, *destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
     stream.avail_out = (uInt)*destLen;
     if ((uLong)stream.avail_out != *destLen) return Z_BUF_ERROR;
 
@@ -57,7 +59,7 @@ int ZEXPORT compress2 (dest, destLen, source, sourceLen, level)
     }
     *destLen = stream.total_out;
 
-    err = deflateEnd((z_streamp)cheri_ptr(&stream, sizeof(z_stream));
+    err = deflateEnd((z_streamp)cheri_ptr(&stream, sizeof(z_stream)));
     return err;
 }
 

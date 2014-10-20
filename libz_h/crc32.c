@@ -29,6 +29,8 @@
 #endif /* MAKECRCH */
 
 #include "zutil.h"      /* for STDC and FAR definitions */
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 #define local static
 
@@ -48,8 +50,8 @@
 
 /* Local functions for crc concatenation */
 local unsigned long gf2_matrix_times OF((__capability unsigned long *mat,
-                                         __capability unsigned long vec));
-local void gf2_matrix_square OF((__capability unsigned long *square, unsigned long *mat));
+                                         unsigned long vec));
+local void gf2_matrix_square OF((__capability unsigned long *square, __capability unsigned long *mat));
 local uLong crc32_combine_ OF((uLong crc1, uLong crc2, z_off64_t len2));
 
 
@@ -201,6 +203,8 @@ const z_crc_t FAR * ZEXPORT get_crc_table()
 #define DO8 DO1; DO1; DO1; DO1; DO1; DO1; DO1; DO1
 
 /* ========================================================================= */
+ZEXTERN uLong ZEXPORT crc32_c   OF((uLong crc, __capability const Bytef *buf, uInt len));
+
 unsigned long ZEXPORT crc32(crc, buf, len)
     unsigned long crc;
     const unsigned char FAR *buf;
@@ -334,9 +338,9 @@ local unsigned long crc32_big(crc, buf, len)
 #define GF2_DIM 32      /* dimension of GF(2) vectors (length of CRC) */
 
 /* ========================================================================= */
-local unsigned long gf2_matrix_times(mat, vec)
-    __capability unsigned long *mat;
-    unsigned long vec;
+local unsigned long gf2_matrix_times (
+    __capability unsigned long * mat,
+    unsigned long vec)
 {
     unsigned long sum;
 
@@ -351,9 +355,9 @@ local unsigned long gf2_matrix_times(mat, vec)
 }
 
 /* ========================================================================= */
-local void gf2_matrix_square(square, mat)
-    __capability unsigned long *square;
-    __capability unsigned long *mat;
+local void gf2_matrix_square (
+    __capability unsigned long *square,
+    __capability unsigned long *mat)
 {
     int n;
 

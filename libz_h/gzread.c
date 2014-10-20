@@ -7,9 +7,11 @@
 
 #include "gzguts.h"
 #include <unistd.h>
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 /* Local functions */
-local int gz_load OF((gz_statep, unsigned char *, unsigned, unsigned *));
+local int gz_load OF((gz_statep, __capability unsigned char *, unsigned, unsigned *));
 local int gz_avail OF((gz_statep));
 local int gz_look OF((gz_statep));
 local int gz_decomp OF((gz_statep));
@@ -22,7 +24,7 @@ local int gz_skip OF((gz_statep, z_off64_t));
    read the number of bytes requested, depending on the type of descriptor. */
 local int gz_load(state, buf, len, have)
     gz_statep state;
-    unsigned char *buf;
+    __capability unsigned char *buf;
     unsigned len;
     unsigned *have;
 {
@@ -30,7 +32,8 @@ local int gz_load(state, buf, len, have)
 
     *have = 0;
     do {
-        ret = read(state->fd, buf + *have, len - *have);
+        /* XXX: CHERI: need cread() callgate in sandbox */
+        ret = read(state->fd, (unsigned char *) buf + *have, len - *have);
         if (ret <= 0)
             break;
         *have += ret;
@@ -55,14 +58,14 @@ local int gz_avail(state)
     gz_statep state;
 {
     unsigned got;
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp)&(state->strm);
 
     if (state->err != Z_OK && state->err != Z_BUF_ERROR)
         return -1;
     if (state->eof == 0) {
         if (strm->avail_in) {       /* copy what's there to the start */
-            unsigned char *p = state->in;
-            unsigned const char *q = strm->next_in;
+            __capability unsigned char *p = state->in;
+            __capability unsigned const char *q = strm->next_in;
             unsigned n = strm->avail_in;
             do {
                 *p++ = *q++;
@@ -94,13 +97,15 @@ local int gz_look(state)
     /* allocate read buffers and inflate memory */
     if (state->size == 0) {
         /* allocate buffers */
-        state->in = (unsigned char *)malloc(state->want);
-        state->out = (unsigned char *)malloc(state->want << 1);
+        state->in = cheri_ptr(malloc(state->want), state->want);
+        state->out = cheri_ptr(malloc(state->want << 1), state->want << 1);
+        /* XXX: NULL semantics with non-zero length? (if malloc returns NULL, and we do a CSetLen, do we get an exception?) */
+        /* XXX: CSetLen should not care about the tag bit being set, so this should be OK (in new ISA; arch doc still out-of-date) */
         if (state->in == NULL || state->out == NULL) {
             if (state->out != NULL)
-                free(state->out);
+                free((void*)state->out);
             if (state->in != NULL)
-                free(state->in);
+                free((void*)state->in);
             gz_error(state, Z_MEM_ERROR, "out of memory");
             return -1;
         }
@@ -112,9 +117,9 @@ local int gz_look(state)
         state->strm.opaque = Z_NULL;
         state->strm.avail_in = 0;
         state->strm.next_in = Z_NULL;
-        if (inflateInit2(&(state->strm), 15 + 16) != Z_OK) {    /* gunzip */
-            free(state->out);
-            free(state->in);
+        if (inflateInit2((z_streamp)&(state->strm), 15 + 16) != Z_OK) {    /* gunzip */
+            free((void*)state->out);
+            free((void*)state->in);
             state->size = 0;
             gz_error(state, Z_MEM_ERROR, "out of memory");
             return -1;
@@ -156,8 +161,9 @@ local int gz_look(state)
     /* doing raw i/o, copy any leftover input to output -- this assumes that
        the output buffer is larger than the input buffer, which also assures
        space for gzungetc() */
-    state->x.next = state->out;
+    state->x.next = (void*)state->out; /* XXX: CHERI: make this a cap in struct */
     if (strm->avail_in) {
+        /* XXX: CHERI: change this to memcpy_c */
         memcpy(state->x.next, strm->next_in, strm->avail_in);
         state->x.have = strm->avail_in;
         strm->avail_in = 0;
@@ -332,6 +338,7 @@ int ZEXPORT gzread(file, buf, len)
         /* first just try copying data from the output buffer */
         if (state->x.have) {
             n = state->x.have > len ? len : state->x.have;
+            /* XXX: CHERI: change this to memcpy_c */
             memcpy(buf, state->x.next, n);
             state->x.next += n;
             state->x.have -= n;
@@ -531,6 +538,7 @@ char * ZEXPORT gzgets(file, buf, len)
             n = (unsigned)(eol - state->x.next) + 1;
 
         /* copy through end-of-line, or remainder if not found */
+        /* XXX: CHERI: change this to memcpy_c */
         memcpy(buf, state->x.next, n);
         state->x.have -= n;
         state->x.next += n;

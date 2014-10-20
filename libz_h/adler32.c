@@ -6,6 +6,7 @@
 /* @(#) $Id$ */
 
 #include "zutil.h"
+#include <machine/cheric.h>
 #include <machine/cherireg.h>
 
 #define local static
@@ -63,6 +64,8 @@ local uLong adler32_combine_ OF((uLong adler1, uLong adler2, z_off64_t len2));
 #endif
 
 /* ========================================================================= */
+ZEXTERN uLong ZEXPORT adler32_c OF((uLong adler, __capability const Bytef *buf, uInt len));
+
 uLong ZEXPORT adler32(adler, buf, len)
     uLong adler;
     const Bytef *buf;
@@ -142,6 +145,7 @@ uLong ZEXPORT adler32_c(adler, buf, len)
     /* return recombined sums */
     return adler | (sum2 << 16);
 }
+
 
 /* ========================================================================= */
 local uLong adler32_combine_(adler1, adler2, len2)

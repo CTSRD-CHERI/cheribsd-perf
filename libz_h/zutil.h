@@ -200,7 +200,12 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  define HAVE_MEMCPY
 #endif
 #ifdef HAVE_MEMCPY
-#  ifdef SMALL_MEDIUM /* MSDOS small or medium model */
+#  if __has_feature(capabilities)
+#    define zmemcpy memcpy
+#    define zmemcpy_c memcpy_c
+#    define zmemcmp memcmp
+#    define zmemzero(dest, len) memset(dest, 0, len)
+#  elif SMALL_MEDIUM /* MSDOS small or medium model */
 #    define zmemcpy _fmemcpy
 #    define zmemcmp _fmemcmp
 #    define zmemzero(dest, len) _fmemset(dest, 0, len)
