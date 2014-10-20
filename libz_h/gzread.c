@@ -92,7 +92,7 @@ local int gz_avail(state)
 local int gz_look(state)
     gz_statep state;
 {
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp) &(state->strm);
 
     /* allocate read buffers and inflate memory */
     if (state->size == 0) {
@@ -161,10 +161,10 @@ local int gz_look(state)
     /* doing raw i/o, copy any leftover input to output -- this assumes that
        the output buffer is larger than the input buffer, which also assures
        space for gzungetc() */
-    state->x.next = (void*)state->out; /* XXX: CHERI: make this a cap in struct */
+    state->x.next = state->out;
     if (strm->avail_in) {
         /* XXX: CHERI: change this to memcpy_c */
-        memcpy(state->x.next, strm->next_in, strm->avail_in);
+        memcpy((void*)state->x.next, (void*)(void*)(void*)(void*)(void*)(void*)(void*)(void*)strm->next_in, strm->avail_in);
         state->x.have = strm->avail_in;
         strm->avail_in = 0;
     }
@@ -183,7 +183,8 @@ local int gz_decomp(state)
 {
     int ret = Z_OK;
     unsigned had;
-    z_streamp strm = &(state->strm);
+    __capability unsigned char *snext;
+    z_streamp strm = (z_streamp) &(state->strm);
 
     /* fill output buffer up to end of deflate stream */
     had = strm->avail_out;
@@ -216,7 +217,8 @@ local int gz_decomp(state)
 
     /* update available output */
     state->x.have = had - strm->avail_out;
-    state->x.next = strm->next_out - state->x.have;
+    snext = strm->next_out;
+    state->x.next = snext + ((snext - strm->next_out) - state->x.have); /* XXX: CHERI ptr difference: check semantics/cleaner way? */
 
     /* if the gzip stream completed successfully, look for another */
     if (ret == Z_STREAM_END)
@@ -235,7 +237,7 @@ local int gz_decomp(state)
 local int gz_fetch(state)
     gz_statep state;
 {
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp) &(state->strm);
 
     do {
         switch(state->how) {
@@ -296,7 +298,7 @@ local int gz_skip(state, len)
 /* -- see zlib.h -- */
 int ZEXPORT gzread(file, buf, len)
     gzFile file;
-    voidp buf;
+    voidp buf; /* XXX: CHERI: make this __capability void */
     unsigned len;
 {
     unsigned got, n;
@@ -307,7 +309,7 @@ int ZEXPORT gzread(file, buf, len)
     if (file == NULL)
         return -1;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp) &(state->strm);
 
     /* check that we're reading and that there's no (serious) error */
     if (state->mode != GZ_READ ||
@@ -339,7 +341,7 @@ int ZEXPORT gzread(file, buf, len)
         if (state->x.have) {
             n = state->x.have > len ? len : state->x.have;
             /* XXX: CHERI: change this to memcpy_c */
-            memcpy(buf, state->x.next, n);
+            memcpy(buf, (void*)state->x.next, n);
             state->x.next += n;
             state->x.have -= n;
         }
@@ -363,14 +365,14 @@ int ZEXPORT gzread(file, buf, len)
 
         /* large len -- read directly into user buffer */
         else if (state->how == COPY) {      /* read directly */
-            if (gz_load(state, (unsigned char *)buf, len, &n) == -1)
+            if (gz_load(state, cheri_ptr(buf, len), len, &n) == -1)
                 return -1;
         }
 
         /* large len -- decompress directly into user buffer */
         else {  /* state->how == GZIP */
             strm->avail_out = len;
-            strm->next_out = (unsigned char *)buf;
+            strm->next_out = cheri_ptr(buf, len);
             if (gz_decomp(state) == -1)
                 return -1;
             n = state->x.have;
@@ -475,8 +477,8 @@ int ZEXPORT gzungetc(c, file)
 
     /* slide output data if needed and insert byte before existing data */
     if (state->x.next == state->out) {
-        unsigned char *src = state->out + state->x.have;
-        unsigned char *dest = state->out + (state->size << 1);
+        __capability unsigned char *src = state->out + state->x.have;
+        __capability unsigned char *dest = state->out + (state->size << 1);
         while (src > state->out)
             *--dest = *--src;
         state->x.next = dest;
@@ -497,7 +499,7 @@ char * ZEXPORT gzgets(file, buf, len)
 {
     unsigned left, n;
     char *str;
-    unsigned char *eol;
+    __capability unsigned char *eol;
     gz_statep state;
 
     /* check parameters and get internal structure */
@@ -533,13 +535,14 @@ char * ZEXPORT gzgets(file, buf, len)
 
         /* look for end-of-line in current output buffer */
         n = state->x.have > left ? left : state->x.have;
-        eol = (unsigned char *)memchr(state->x.next, '\n', n);
+        /* XXX: need CHERI-aware memchr */
+        eol = (__capability void*)memchr((void*)state->x.next, '\n', n);
         if (eol != NULL)
             n = (unsigned)(eol - state->x.next) + 1;
 
         /* copy through end-of-line, or remainder if not found */
         /* XXX: CHERI: change this to memcpy_c */
-        memcpy(buf, state->x.next, n);
+        memcpy(buf, (void*)state->x.next, n);
         state->x.have -= n;
         state->x.next += n;
         state->x.pos += n;
@@ -592,9 +595,9 @@ int ZEXPORT gzclose_r(file)
 
     /* free memory and close file */
     if (state->size) {
-        inflateEnd(&(state->strm));
-        free(state->out);
-        free(state->in);
+        inflateEnd((z_streamp)&(state->strm));
+        free((void*)state->out);
+        free((void*)state->in);
     }
     err = state->err == Z_BUF_ERROR ? Z_BUF_ERROR : Z_OK;
     gz_error(state, Z_OK, NULL);

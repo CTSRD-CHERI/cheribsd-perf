@@ -69,18 +69,18 @@ z_streamp strm;
 unsigned start;         /* inflate()'s starting value for strm->avail_out */
 {
     struct inflate_state FAR *state;
-    z_const unsigned char FAR *in;      /* local strm->next_in */
-    z_const unsigned char FAR *last;    /* have enough input while in < last */
-    unsigned char FAR *out;     /* local strm->next_out */
-    unsigned char FAR *beg;     /* inflate()'s initial strm->next_out */
-    unsigned char FAR *end;     /* while out < end, enough space available */
+    __capability z_const unsigned char FAR *in;      /* local strm->next_in */
+    __capability z_const unsigned char FAR *last;    /* have enough input while in < last */
+    __capability unsigned char FAR *out;     /* local strm->next_out */
+    __capability unsigned char FAR *beg;     /* inflate()'s initial strm->next_out */
+    __capability unsigned char FAR *end;     /* while out < end, enough space available */
 #ifdef INFLATE_STRICT
     unsigned dmax;              /* maximum distance from zlib header */
 #endif
     unsigned wsize;             /* window size or zero if not using window */
     unsigned whave;             /* valid bytes in the window */
     unsigned wnext;             /* window write index */
-    unsigned char FAR *window;  /* allocated sliding window, if wsize != 0 */
+    __capability unsigned char FAR *window;  /* allocated sliding window, if wsize != 0 */
     unsigned long hold;         /* local strm->hold */
     unsigned bits;              /* local strm->bits */
     code const FAR *lcode;      /* local strm->lencode */
@@ -92,10 +92,11 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                                 /*  window position, window bytes to copy */
     unsigned len;               /* match length, unused bytes */
     unsigned dist;              /* match distance */
-    unsigned char FAR *from;    /* where to copy match from */
+    __capability unsigned char FAR *from;    /* where to copy match from */
 
     /* copy state to local variables */
     state = (struct inflate_state FAR *)strm->state;
+    /* XXX: CHERI: ptr diff issues? */
     in = strm->next_in - OFF;
     last = in + (strm->avail_in - 5);
     out = strm->next_out - OFF;
@@ -213,6 +214,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                         }
 #endif
                     }
+                    /* XXX: CHERI: ptr diff issues? */
                     from = window - OFF;
                     if (wnext == 0) {           /* very common case */
                         from += wsize - op;
@@ -221,6 +223,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             do {
                                 PUP(out) = PUP(from);
                             } while (--op);
+                            /* XXX: CHERI: ptr diff issues? */
                             from = out - dist;  /* rest from output */
                         }
                     }
@@ -232,6 +235,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             do {
                                 PUP(out) = PUP(from);
                             } while (--op);
+                            /* XXX: CHERI: ptr diff issues? */
                             from = window - OFF;
                             if (wnext < len) {  /* some from start of window */
                                 op = wnext;
@@ -239,6 +243,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                                 do {
                                     PUP(out) = PUP(from);
                                 } while (--op);
+                                /* XXX: CHERI: ptr diff issues? */
                                 from = out - dist;      /* rest from output */
                             }
                         }
@@ -250,6 +255,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             do {
                                 PUP(out) = PUP(from);
                             } while (--op);
+                            /* XXX: CHERI: ptr diff issues? */
                             from = out - dist;  /* rest from output */
                         }
                     }
@@ -266,6 +272,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                     }
                 }
                 else {
+                    /* XXX: CHERI: ptr diff issues? */
                     from = out - dist;          /* copy direct from output */
                     do {                        /* minimum length is three */
                         PUP(out) = PUP(from);
@@ -308,6 +315,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
 
     /* return unused bytes (on entry, bits < 8, so in won't go too far back) */
     len = bits >> 3;
+    /* XXX: CHERI: ptr diff issues? */
     in -= len;
     bits -= len << 3;
     hold &= (1U << bits) - 1;

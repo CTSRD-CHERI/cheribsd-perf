@@ -14,6 +14,8 @@
 #include "inftrees.h"
 #include "inflate.h"
 #include "inffast.h"
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 /* function prototypes */
 local void fixedtables OF((struct inflate_state FAR *state));
@@ -63,7 +65,7 @@ int stream_size;
     state->dmax = 32768U;
     state->wbits = windowBits;
     state->wsize = 1U << windowBits;
-    state->window = window;
+    state->window = cheri_ptr(window, state->wsize);
     state->wnext = 0;
     state->whave = 0;
     return Z_OK;
@@ -255,13 +257,13 @@ out_func out;
 void FAR *out_desc;
 {
     struct inflate_state FAR *state;
-    z_const unsigned char FAR *next;    /* next input */
-    unsigned char FAR *put;     /* next output */
+    __capability z_const unsigned char FAR *next;    /* next input */
+    __capability unsigned char FAR *put;     /* next output */
     unsigned have, left;        /* available input and output */
     unsigned long hold;         /* bit buffer */
     unsigned bits;              /* bits in bit buffer */
     unsigned copy;              /* number of stored or match bytes to copy */
-    unsigned char FAR *from;    /* where to copy match bytes from */
+    __capability unsigned char FAR *from;    /* where to copy match bytes from */
     code here;                  /* current decoding table entry */
     code last;                  /* parent table entry */
     unsigned len;               /* length to copy for repeats, bits to drop */
@@ -344,7 +346,7 @@ void FAR *out_desc;
                 ROOM();
                 if (copy > have) copy = have;
                 if (copy > left) copy = left;
-                zmemcpy(put, next, copy);
+                zmemcpy_c(put, next, copy);
                 have -= copy;
                 next += copy;
                 left -= copy;

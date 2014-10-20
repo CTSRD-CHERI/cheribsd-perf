@@ -7,6 +7,8 @@
 
 #define ZLIB_INTERNAL
 #include "zlib.h"
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 /* ===========================================================================
      Decompresses the source buffer into the destination buffer.  sourceLen is
@@ -30,30 +32,32 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     z_stream stream;
     int err;
 
-    stream.next_in = (z_const Bytef *)source;
+    stream.next_in = cheri_ptrperm((void*)source, sourceLen, CHERI_PERM_LOAD);
     stream.avail_in = (uInt)sourceLen;
     /* Check for source > 64K on 16-bit machine: */
     if ((uLong)stream.avail_in != sourceLen) return Z_BUF_ERROR;
 
-    stream.next_out = dest;
+    stream.next_out = cheri_ptrperm((void*)dest, *destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
     stream.avail_out = (uInt)*destLen;
     if ((uLong)stream.avail_out != *destLen) return Z_BUF_ERROR;
 
     stream.zalloc = (alloc_func)0;
     stream.zfree = (free_func)0;
 
-    err = inflateInit(&stream);
+    /* XXX: CHERI: give proper caps to inflateInit etc (see compress.c) */
+
+    err = inflateInit((z_streamp)&stream);
     if (err != Z_OK) return err;
 
-    err = inflate(&stream, Z_FINISH);
+    err = inflate((z_streamp)&stream, Z_FINISH);
     if (err != Z_STREAM_END) {
-        inflateEnd(&stream);
+        inflateEnd((z_streamp)&stream);
         if (err == Z_NEED_DICT || (err == Z_BUF_ERROR && stream.avail_in == 0))
             return Z_DATA_ERROR;
         return err;
     }
     *destLen = stream.total_out;
 
-    err = inflateEnd(&stream);
+    err = inflateEnd((z_streamp)&stream);
     return err;
 }

@@ -596,12 +596,14 @@ uLong ZEXPORT deflateBound(strm, sourceLen)
         if (s->gzhead != Z_NULL) {          /* user-supplied gzip header */
             if (s->gzhead->extra != Z_NULL)
                 wraplen += 2 + s->gzhead->extra_len;
-            str = s->gzhead->name;
+            /* XXX: CHERI: make str a cap */
+            str = (unsigned char *) s->gzhead->name;
             if (str != Z_NULL)
                 do {
                     wraplen++;
                 } while (*str++);
-            str = s->gzhead->comment;
+            /* XXX: CHERI: make str a cap */
+            str = (unsigned char *) s->gzhead->comment;
             if (str != Z_NULL)
                 do {
                     wraplen++;

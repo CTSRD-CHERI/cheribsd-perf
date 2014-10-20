@@ -7,6 +7,8 @@
 
 #include "gzguts.h"
 #include <unistd.h>
+#include <machine/cheric.h>
+#include <machine/cherireg.h>
 
 /* Local functions */
 local int gz_init OF((gz_statep));
@@ -19,10 +21,10 @@ local int gz_init(state)
     gz_statep state;
 {
     int ret;
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp)&(state->strm); /* XXX: CHERI: this and all others in file: need to make a proper capability out of this */
 
     /* allocate input buffer */
-    state->in = (unsigned char *)malloc(state->want);
+    state->in = cheri_ptr(malloc(state->want), state->want);
     if (state->in == NULL) {
         gz_error(state, Z_MEM_ERROR, "out of memory");
         return -1;
@@ -31,9 +33,9 @@ local int gz_init(state)
     /* only need output buffer and deflate state if compressing */
     if (!state->direct) {
         /* allocate output buffer */
-        state->out = (unsigned char *)malloc(state->want);
+        state->out = cheri_ptr(malloc(state->want), state->want);
         if (state->out == NULL) {
-            free(state->in);
+            free((void*)state->in);
             gz_error(state, Z_MEM_ERROR, "out of memory");
             return -1;
         }
@@ -45,8 +47,8 @@ local int gz_init(state)
         ret = deflateInit2(strm, state->level, Z_DEFLATED,
                            MAX_WBITS + 16, DEF_MEM_LEVEL, state->strategy);
         if (ret != Z_OK) {
-            free(state->out);
-            free(state->in);
+            free((void*)state->out);
+            free((void*)state->in);
             gz_error(state, Z_MEM_ERROR, "out of memory");
             return -1;
         }
@@ -76,7 +78,7 @@ local int gz_comp(state, flush)
 {
     int ret, got;
     unsigned have;
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp)&(state->strm);
 
     /* allocate memory if this is the first time through */
     if (state->size == 0 && gz_init(state) == -1)
@@ -84,7 +86,8 @@ local int gz_comp(state, flush)
 
     /* write directly if requested */
     if (state->direct) {
-        got = write(state->fd, strm->next_in, strm->avail_in);
+        /* XXX: CHERI-aware write needed */
+        got = write(state->fd, (void*)strm->next_in, strm->avail_in);
         if (got < 0 || (unsigned)got != strm->avail_in) {
             gz_error(state, Z_ERRNO, zstrerror());
             return -1;
@@ -101,7 +104,8 @@ local int gz_comp(state, flush)
         if (strm->avail_out == 0 || (flush != Z_NO_FLUSH &&
             (flush != Z_FINISH || ret == Z_STREAM_END))) {
             have = (unsigned)(strm->next_out - state->x.next);
-            if (have && ((got = write(state->fd, state->x.next, have)) < 0 ||
+            /* XXX: CHERI-aware write needed */
+            if (have && ((got = write(state->fd, (void*)state->x.next, have)) < 0 ||
                          (unsigned)got != have)) {
                 gz_error(state, Z_ERRNO, zstrerror());
                 return -1;
@@ -139,7 +143,7 @@ local int gz_zero(state, len)
 {
     int first;
     unsigned n;
-    z_streamp strm = &(state->strm);
+    z_streamp strm = (z_streamp)&(state->strm);
 
     /* consume whatever's left in the input buffer */
     if (strm->avail_in && gz_comp(state, Z_NO_FLUSH) == -1)
@@ -151,7 +155,8 @@ local int gz_zero(state, len)
         n = GT_OFF(state->size) || (z_off64_t)state->size > len ?
             (unsigned)len : state->size;
         if (first) {
-            memset(state->in, 0, n);
+            /* XXX: CHERI-aware memset needed */
+            memset((void*)state->in, 0, n);
             first = 0;
         }
         strm->avail_in = n;
@@ -178,7 +183,7 @@ int ZEXPORT gzwrite(file, buf, len)
     if (file == NULL)
         return 0;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp)&(state->strm);
 
     /* check that we're writing and that there's no error */
     if (state->mode != GZ_WRITE || state->err != Z_OK)
@@ -218,7 +223,8 @@ int ZEXPORT gzwrite(file, buf, len)
             copy = state->size - have;
             if (copy > len)
                 copy = len;
-            memcpy(state->in + have, buf, copy);
+            /* XXX: CHERI-aware memcpy needed */
+            memcpy((void*)(state->in + have), buf, copy);
             strm->avail_in += copy;
             state->x.pos += copy;
             buf = (const char *)buf + copy;
@@ -234,7 +240,8 @@ int ZEXPORT gzwrite(file, buf, len)
 
         /* directly compress user buffer to file */
         strm->avail_in = len;
-        strm->next_in = (z_const Bytef *)buf;
+        /* XXX: make buf a CHERI cap */
+        strm->next_in = cheri_ptrperm((void*)buf, len, CHERI_PERM_LOAD);
         state->x.pos += len;
         if (gz_comp(state, Z_NO_FLUSH) == -1)
             return 0;
@@ -258,7 +265,7 @@ int ZEXPORT gzputc(file, c)
     if (file == NULL)
         return -1;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp)&(state->strm);
 
     /* check that we're writing and that there's no error */
     if (state->mode != GZ_WRITE || state->err != Z_OK)
@@ -287,7 +294,8 @@ int ZEXPORT gzputc(file, c)
 
     /* no room in buffer or not initialized, use gz_write() */
     buf[0] = c;
-    if (gzwrite(file, buf, 1) != 1)
+    /* XXX: CHERI-aware gzwrite needed */
+    if (gzwrite(file, (void*)buf, 1) != 1)
         return -1;
     return c & 0xff;
 }
@@ -320,7 +328,7 @@ int ZEXPORTVA gzvprintf(gzFile file, const char *format, va_list va)
     if (file == NULL)
         return -1;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp)&(state->strm);
 
     /* check that we're writing and that there's no error */
     if (state->mode != GZ_WRITE || state->err != Z_OK)
@@ -401,7 +409,7 @@ int ZEXPORTVA gzprintf (file, format, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10,
     if (file == NULL)
         return -1;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp)&(state->strm);
 
     /* check that can really pass pointer in ints */
     if (sizeof(int) != sizeof(void *))
@@ -509,7 +517,7 @@ int ZEXPORT gzsetparams(file, level, strategy)
     if (file == NULL)
         return Z_STREAM_ERROR;
     state = (gz_statep)file;
-    strm = &(state->strm);
+    strm = (z_streamp)&(state->strm);
 
     /* check that we're writing and that there's no error */
     if (state->mode != GZ_WRITE || state->err != Z_OK)
@@ -566,15 +574,15 @@ int ZEXPORT gzclose_w(file)
         ret = state->err;
     if (state->size) {
         if (!state->direct) {
-            (void)deflateEnd(&(state->strm));
-            free(state->out);
+            (void)deflateEnd((z_streamp)&(state->strm));
+            free((void*)state->out);
         }
-        free(state->in);
+        free((void*)state->in);
     }
     gz_error(state, Z_OK, NULL);
-    free(state->path);
+    free((void*)state->path);
     if (close(state->fd) == -1)
         ret = Z_ERRNO;
-    free(state);
+    free((void*)state);
     return ret;
 }
