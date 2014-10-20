@@ -3,3 +3,5 @@ libz_u:   zlib unmodified
 gzip_a:   gzip with capsicum sandboxing
 gzip_h:   gzip with CHERI fd and libcheri sandboxing
 libz_h:   libz with (proper) CHERI sandboxing
+
+NOTE: gzip_u with Makefile_libz_h.CHERI is used to compile the gzip unmodified, libz with CHERI case.
