@@ -38,18 +38,18 @@
 #endif
 #ifdef BYFOUR
    local unsigned long crc32_little OF((unsigned long,
-                        const unsigned char FAR *, unsigned));
+                        __capability const unsigned char FAR *, unsigned));
    local unsigned long crc32_big OF((unsigned long,
-                        const unsigned char FAR *, unsigned));
+                        __capability const unsigned char FAR *, unsigned));
 #  define TBLS 8
 #else
 #  define TBLS 1
 #endif /* BYFOUR */
 
 /* Local functions for crc concatenation */
-local unsigned long gf2_matrix_times OF((unsigned long *mat,
-                                         unsigned long vec));
-local void gf2_matrix_square OF((unsigned long *square, unsigned long *mat));
+local unsigned long gf2_matrix_times OF((__capability unsigned long *mat,
+                                         __capability unsigned long vec));
+local void gf2_matrix_square OF((__capability unsigned long *square, unsigned long *mat));
 local uLong crc32_combine_ OF((uLong crc1, uLong crc2, z_off64_t len2));
 
 
@@ -206,6 +206,16 @@ unsigned long ZEXPORT crc32(crc, buf, len)
     const unsigned char FAR *buf;
     uInt len;
 {
+    return crc32_c(crc,
+      cheri_ptrperm((void *) buf, len, CHERI_PERM_LOAD),
+      len);
+}
+
+unsigned long ZEXPORT crc32_c(crc, buf, len)
+    unsigned long crc;
+    __capability const unsigned char FAR *buf;
+    uInt len;
+{
     if (buf == Z_NULL) return 0UL;
 
 #ifdef DYNAMIC_CRC_TABLE
@@ -246,11 +256,11 @@ unsigned long ZEXPORT crc32(crc, buf, len)
 /* ========================================================================= */
 local unsigned long crc32_little(crc, buf, len)
     unsigned long crc;
-    const unsigned char FAR *buf;
+    __capability const unsigned char FAR *buf;
     unsigned len;
 {
     register z_crc_t c;
-    register const z_crc_t FAR *buf4;
+    __capability register const z_crc_t FAR *buf4;
 
     c = (z_crc_t)crc;
     c = ~c;
@@ -259,7 +269,7 @@ local unsigned long crc32_little(crc, buf, len)
         len--;
     }
 
-    buf4 = (const z_crc_t FAR *)(const void FAR *)buf;
+    buf4 = (__capability const z_crc_t FAR *)(__capability const void FAR *)buf;
     while (len >= 32) {
         DOLIT32;
         len -= 32;
@@ -268,7 +278,7 @@ local unsigned long crc32_little(crc, buf, len)
         DOLIT4;
         len -= 4;
     }
-    buf = (const unsigned char FAR *)buf4;
+    buf = (__capability const unsigned char FAR *)buf4;
 
     if (len) do {
         c = crc_table[0][(c ^ *buf++) & 0xff] ^ (c >> 8);
@@ -286,11 +296,11 @@ local unsigned long crc32_little(crc, buf, len)
 /* ========================================================================= */
 local unsigned long crc32_big(crc, buf, len)
     unsigned long crc;
-    const unsigned char FAR *buf;
+    __capability const unsigned char FAR *buf;
     unsigned len;
 {
     register z_crc_t c;
-    register const z_crc_t FAR *buf4;
+    __capability register const z_crc_t FAR *buf4;
 
     c = ZSWAP32((z_crc_t)crc);
     c = ~c;
@@ -299,7 +309,7 @@ local unsigned long crc32_big(crc, buf, len)
         len--;
     }
 
-    buf4 = (const z_crc_t FAR *)(const void FAR *)buf;
+    buf4 = (__capability const z_crc_t FAR *)(__capability const void FAR *)buf;
     buf4--;
     while (len >= 32) {
         DOBIG32;
@@ -310,7 +320,7 @@ local unsigned long crc32_big(crc, buf, len)
         len -= 4;
     }
     buf4++;
-    buf = (const unsigned char FAR *)buf4;
+    buf = (__capability const unsigned char FAR *)buf4;
 
     if (len) do {
         c = crc_table[4][(c >> 24) ^ *buf++] ^ (c << 8);
@@ -325,7 +335,7 @@ local unsigned long crc32_big(crc, buf, len)
 
 /* ========================================================================= */
 local unsigned long gf2_matrix_times(mat, vec)
-    unsigned long *mat;
+    __capability unsigned long *mat;
     unsigned long vec;
 {
     unsigned long sum;
@@ -342,8 +352,8 @@ local unsigned long gf2_matrix_times(mat, vec)
 
 /* ========================================================================= */
 local void gf2_matrix_square(square, mat)
-    unsigned long *square;
-    unsigned long *mat;
+    __capability unsigned long *square;
+    __capability unsigned long *mat;
 {
     int n;
 
@@ -361,32 +371,39 @@ local uLong crc32_combine_(crc1, crc2, len2)
     unsigned long row;
     unsigned long even[GF2_DIM];    /* even-power-of-two zeros operator */
     unsigned long odd[GF2_DIM];     /* odd-power-of-two zeros operator */
-
+    __capability unsigned long * evenp;
+    __capability unsigned long * oddp;
+    
     /* degenerate case (also disallow negative lengths) */
     if (len2 <= 0)
         return crc1;
 
+    evenp = cheri_ptrperm(even, GF2_DIM,
+      CHERI_PERM_LOAD | CHERI_PERM_STORE);
+    oddp = cheri_ptrperm(odd, GF2_DIM,
+      CHERI_PERM_LOAD | CHERI_PERM_STORE);
+
     /* put operator for one zero bit in odd */
-    odd[0] = 0xedb88320UL;          /* CRC-32 polynomial */
+    oddp[0] = 0xedb88320UL;          /* CRC-32 polynomial */
     row = 1;
     for (n = 1; n < GF2_DIM; n++) {
-        odd[n] = row;
+        oddp[n] = row;
         row <<= 1;
     }
 
     /* put operator for two zero bits in even */
-    gf2_matrix_square(even, odd);
+    gf2_matrix_square(evenp, oddp);
 
     /* put operator for four zero bits in odd */
-    gf2_matrix_square(odd, even);
+    gf2_matrix_square(oddp, evenp);
 
     /* apply len2 zeros to crc1 (first square will put the operator for one
        zero byte, eight zero bits, in even) */
     do {
         /* apply zeros operator for this bit of len2 */
-        gf2_matrix_square(even, odd);
+        gf2_matrix_square(evenp, oddp);
         if (len2 & 1)
-            crc1 = gf2_matrix_times(even, crc1);
+            crc1 = gf2_matrix_times(evenp, crc1);
         len2 >>= 1;
 
         /* if no more bits set, then done */
@@ -394,9 +411,9 @@ local uLong crc32_combine_(crc1, crc2, len2)
             break;
 
         /* another iteration of the loop with odd and even swapped */
-        gf2_matrix_square(odd, even);
+        gf2_matrix_square(oddp, evenp);
         if (len2 & 1)
-            crc1 = gf2_matrix_times(odd, crc1);
+            crc1 = gf2_matrix_times(oddp, crc1);
         len2 >>= 1;
 
         /* if no more bits set, then done */
