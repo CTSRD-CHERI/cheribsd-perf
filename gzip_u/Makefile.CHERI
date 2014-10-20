@@ -8,10 +8,9 @@
 PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 
-DPADD=		${LIBZ} ${LIBLZMA}
 LDADD=		../libz_u/libz.a
 
-CFLAGS+=-DNO_XZ_SUPPORT
+CFLAGS+=-DNO_XZ_SUPPORT -DLIBZ_MODIFIED_STRING=\"u\"
 
 MK_BZIP2_SUPPORT=no
 .if ${MK_BZIP2_SUPPORT} != "no"

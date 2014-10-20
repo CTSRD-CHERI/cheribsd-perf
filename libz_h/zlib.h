@@ -83,11 +83,13 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 struct internal_state;
 
 typedef struct z_stream_s {
-    __capability z_const Bytef *next_in;     /* next input byte */
+    z_const Bytef *next_in; /* so that gzip need not be modified */
+    __capability z_const Bytef *next_in_c;     /* next input byte */
     uInt     avail_in;  /* number of bytes available at next_in */
     uLong    total_in;  /* total number of input bytes read so far */
 
-    __capability Bytef    *next_out; /* next output byte should be put there */
+    Bytef *next_out; /* so that gzip need not be modified */
+    __capability Bytef    *next_out_c; /* next output byte should be put there */
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 
@@ -104,6 +106,7 @@ typedef struct z_stream_s {
 } z_stream;
 
 typedef __capability z_stream FAR *z_streamp;
+typedef z_stream FAR *z_streamp_nocap;
 
 /*
      gzip header information passed to and from zlib routines.  See RFC 1952
@@ -242,8 +245,9 @@ ZEXTERN int ZEXPORT deflateInit OF((z_streamp strm, int level));
    this will be done by deflate().
 */
 
-
-ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
+/* XXX: CHERI: for backwards compatibility */
+ZEXTERN int ZEXPORT deflate OF((z_streamp_nocap strm, int flush));
+ZEXTERN int ZEXPORT deflate_c OF((z_streamp strm, int flush));
 /*
     deflate compresses as much data as possible, and stops when the input
   buffer becomes empty or the output buffer becomes full.  It may introduce
@@ -350,7 +354,9 @@ ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
 */
 
 
-ZEXTERN int ZEXPORT deflateEnd OF((z_streamp strm));
+/* XXX: CHERI: for backwards compatibility */
+ZEXTERN int ZEXPORT deflateEnd OF((z_streamp_nocap strm));
+ZEXTERN int ZEXPORT deflateEnd_c OF((z_streamp strm));
 /*
      All dynamically allocated data structures for this stream are freed.
    This function discards any unprocessed input and does not flush any pending
@@ -389,7 +395,9 @@ ZEXTERN int ZEXPORT inflateInit OF((z_streamp strm));
 */
 
 
-ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
+/* XXX: CHERI: for backwards compatibility */
+ZEXTERN int ZEXPORT inflate OF((z_streamp_nocap strm, int flush));
+ZEXTERN int ZEXPORT inflate_c OF((z_streamp strm, int flush));
 /*
     inflate decompresses as much data as possible, and stops when the input
   buffer becomes empty or the output buffer becomes full.  It may introduce
@@ -505,7 +513,8 @@ ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
 */
 
 
-ZEXTERN int ZEXPORT inflateEnd OF((z_streamp strm));
+ZEXTERN int ZEXPORT inflateEnd OF((z_streamp_nocap strm));
+ZEXTERN int ZEXPORT inflateEnd_c OF((z_streamp strm));
 /*
      All dynamically allocated data structures for this stream are freed.
    This function discards any unprocessed input and does not flush any pending
@@ -1641,10 +1650,14 @@ ZEXTERN int ZEXPORT deflateInit_ OF((z_streamp strm, int level,
                                      const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateInit_ OF((z_streamp strm,
                                      const char *version, int stream_size));
+ZEXTERN int ZEXPORT deflateInit2 OF((z_streamp_nocap strm, int  level, int  method,
+                                      int windowBits, int memLevel,
+                                      int strategy));
 ZEXTERN int ZEXPORT deflateInit2_ OF((z_streamp strm, int  level, int  method,
                                       int windowBits, int memLevel,
                                       int strategy, const char *version,
                                       int stream_size));
+ZEXTERN int ZEXPORT inflateInit2 OF((z_streamp_nocap strm, int  windowBits));
 ZEXTERN int ZEXPORT inflateInit2_ OF((z_streamp strm, int  windowBits,
                                       const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
@@ -1655,10 +1668,10 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
         deflateInit_((strm), (level), ZLIB_VERSION, (int)sizeof(z_stream))
 #define inflateInit(strm) \
         inflateInit_((strm), ZLIB_VERSION, (int)sizeof(z_stream))
-#define deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
+#define deflateInit2_c(strm, level, method, windowBits, memLevel, strategy) \
         deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
                       (strategy), ZLIB_VERSION, (int)sizeof(z_stream))
-#define inflateInit2(strm, windowBits) \
+#define inflateInit2_c(strm, windowBits) \
         inflateInit2_((strm), (windowBits), ZLIB_VERSION, \
                       (int)sizeof(z_stream))
 #define inflateBackInit(strm, windowBits, window) \

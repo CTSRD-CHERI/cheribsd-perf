@@ -65,7 +65,7 @@ local int gz_avail(state)
     if (state->eof == 0) {
         if (strm->avail_in) {       /* copy what's there to the start */
             __capability unsigned char *p = state->in;
-            __capability unsigned const char *q = strm->next_in;
+            __capability unsigned const char *q = strm->next_in_c;
             unsigned n = strm->avail_in;
             do {
                 *p++ = *q++;
@@ -75,7 +75,7 @@ local int gz_avail(state)
                     state->size - strm->avail_in, &got) == -1)
             return -1;
         strm->avail_in += got;
-        strm->next_in = state->in;
+        strm->next_in_c = state->in;
     }
     return 0;
 }
@@ -116,8 +116,8 @@ local int gz_look(state)
         state->strm.zfree = Z_NULL;
         state->strm.opaque = Z_NULL;
         state->strm.avail_in = 0;
-        state->strm.next_in = Z_NULL;
-        if (inflateInit2((z_streamp)&(state->strm), 15 + 16) != Z_OK) {    /* gunzip */
+        state->strm.next_in_c = Z_NULL;
+        if (inflateInit2_c((z_streamp)&(state->strm), 15 + 16) != Z_OK) {    /* gunzip */
             free((void*)state->out);
             free((void*)state->in);
             state->size = 0;
@@ -142,7 +142,7 @@ local int gz_look(state)
        the header will be written in a single operation, so that reading a
        single byte is sufficient indication that it is not a gzip file) */
     if (strm->avail_in > 1 &&
-            strm->next_in[0] == 31 && strm->next_in[1] == 139) {
+            strm->next_in_c[0] == 31 && strm->next_in_c[1] == 139) {
         inflateReset(strm);
         state->how = GZIP;
         state->direct = 0;
@@ -164,7 +164,7 @@ local int gz_look(state)
     state->x.next = state->out;
     if (strm->avail_in) {
         /* XXX: CHERI: change this to memcpy_c */
-        memcpy((void*)state->x.next, (void*)(void*)(void*)(void*)(void*)(void*)(void*)(void*)strm->next_in, strm->avail_in);
+        memcpy((void*)state->x.next, (void*)(void*)(void*)(void*)(void*)(void*)(void*)(void*)strm->next_in_c, strm->avail_in);
         state->x.have = strm->avail_in;
         strm->avail_in = 0;
     }
@@ -198,7 +198,7 @@ local int gz_decomp(state)
         }
 
         /* decompress and handle errors */
-        ret = inflate(strm, Z_NO_FLUSH);
+        ret = inflate_c(strm, Z_NO_FLUSH);
         if (ret == Z_STREAM_ERROR || ret == Z_NEED_DICT) {
             gz_error(state, Z_STREAM_ERROR,
                      "internal error: inflate stream corrupt");
@@ -217,8 +217,8 @@ local int gz_decomp(state)
 
     /* update available output */
     state->x.have = had - strm->avail_out;
-    snext = strm->next_out;
-    state->x.next = snext + ((snext - strm->next_out) - state->x.have); /* XXX: CHERI ptr difference: check semantics/cleaner way? */
+    snext = strm->next_out_c;
+    state->x.next = snext + ((snext - strm->next_out_c) - state->x.have); /* XXX: CHERI ptr difference: check semantics/cleaner way? */
 
     /* if the gzip stream completed successfully, look for another */
     if (ret == Z_STREAM_END)
@@ -255,7 +255,7 @@ local int gz_fetch(state)
             return 0;
         case GZIP:      /* -> GZIP or LOOK (if end of gzip stream) */
             strm->avail_out = state->size << 1;
-            strm->next_out = state->out;
+            strm->next_out_c = state->out;
             if (gz_decomp(state) == -1)
                 return -1;
         }
@@ -372,7 +372,7 @@ int ZEXPORT gzread(file, buf, len)
         /* large len -- decompress directly into user buffer */
         else {  /* state->how == GZIP */
             strm->avail_out = len;
-            strm->next_out = cheri_ptr(buf, len);
+            strm->next_out_c = cheri_ptr(buf, len);
             if (gz_decomp(state) == -1)
                 return -1;
             n = state->x.have;
@@ -595,7 +595,7 @@ int ZEXPORT gzclose_r(file)
 
     /* free memory and close file */
     if (state->size) {
-        inflateEnd((z_streamp)&(state->strm));
+        inflateEnd_c((z_streamp)&(state->strm));
         free((void*)state->out);
         free((void*)state->in);
     }

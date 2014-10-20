@@ -97,9 +97,9 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     /* copy state to local variables */
     state = (struct inflate_state FAR *)strm->state;
     /* XXX: CHERI: ptr diff issues? */
-    in = strm->next_in - OFF;
+    in = strm->next_in_c - OFF;
     last = in + (strm->avail_in - 5);
-    out = strm->next_out - OFF;
+    out = strm->next_out_c - OFF;
     beg = out - (start - strm->avail_out);
     end = out + (strm->avail_out - 257);
 #ifdef INFLATE_STRICT
@@ -321,8 +321,8 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     hold &= (1U << bits) - 1;
 
     /* update state and return */
-    strm->next_in = in + OFF;
-    strm->next_out = out + OFF;
+    strm->next_in_c = in + OFF;
+    strm->next_out_c = out + OFF;
     strm->avail_in = (unsigned)(in < last ? 5 + (last - in) : 5 - (in - last));
     strm->avail_out = (unsigned)(out < end ?
                                  257 + (end - out) : 257 - (out - end));

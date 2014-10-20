@@ -44,7 +44,7 @@ local int gz_init(state)
         strm->zalloc = Z_NULL;
         strm->zfree = Z_NULL;
         strm->opaque = Z_NULL;
-        ret = deflateInit2(strm, state->level, Z_DEFLATED,
+        ret = deflateInit2_c(strm, state->level, Z_DEFLATED,
                            MAX_WBITS + 16, DEF_MEM_LEVEL, state->strategy);
         if (ret != Z_OK) {
             free((void*)state->out);
@@ -60,8 +60,8 @@ local int gz_init(state)
     /* initialize write buffer if compressing */
     if (!state->direct) {
         strm->avail_out = state->size;
-        strm->next_out = state->out;
-        state->x.next = strm->next_out;
+        strm->next_out_c = state->out;
+        state->x.next = strm->next_out_c;
     }
     return 0;
 }
@@ -87,7 +87,7 @@ local int gz_comp(state, flush)
     /* write directly if requested */
     if (state->direct) {
         /* XXX: CHERI-aware write needed */
-        got = write(state->fd, (void*)strm->next_in, strm->avail_in);
+        got = write(state->fd, (void*)strm->next_in_c, strm->avail_in);
         if (got < 0 || (unsigned)got != strm->avail_in) {
             gz_error(state, Z_ERRNO, zstrerror());
             return -1;
@@ -103,7 +103,7 @@ local int gz_comp(state, flush)
            doing Z_FINISH then don't write until we get to Z_STREAM_END */
         if (strm->avail_out == 0 || (flush != Z_NO_FLUSH &&
             (flush != Z_FINISH || ret == Z_STREAM_END))) {
-            have = (unsigned)(strm->next_out - state->x.next);
+            have = (unsigned)(strm->next_out_c - state->x.next);
             /* XXX: CHERI-aware write needed */
             if (have && ((got = write(state->fd, (void*)state->x.next, have)) < 0 ||
                          (unsigned)got != have)) {
@@ -112,14 +112,14 @@ local int gz_comp(state, flush)
             }
             if (strm->avail_out == 0) {
                 strm->avail_out = state->size;
-                strm->next_out = state->out;
+                strm->next_out_c = state->out;
             }
-            state->x.next = strm->next_out;
+            state->x.next = strm->next_out_c;
         }
 
         /* compress */
         have = strm->avail_out;
-        ret = deflate(strm, flush);
+        ret = deflate_c(strm, flush);
         if (ret == Z_STREAM_ERROR) {
             gz_error(state, Z_STREAM_ERROR,
                       "internal error: deflate stream corrupt");
@@ -160,7 +160,7 @@ local int gz_zero(state, len)
             first = 0;
         }
         strm->avail_in = n;
-        strm->next_in = state->in;
+        strm->next_in_c = state->in;
         state->x.pos += n;
         if (gz_comp(state, Z_NO_FLUSH) == -1)
             return -1;
@@ -218,8 +218,8 @@ int ZEXPORT gzwrite(file, buf, len)
             unsigned have, copy;
 
             if (strm->avail_in == 0)
-                strm->next_in = state->in;
-            have = (unsigned)((strm->next_in + strm->avail_in) - state->in);
+                strm->next_in_c = state->in;
+            have = (unsigned)((strm->next_in_c + strm->avail_in) - state->in);
             copy = state->size - have;
             if (copy > len)
                 copy = len;
@@ -241,7 +241,7 @@ int ZEXPORT gzwrite(file, buf, len)
         /* directly compress user buffer to file */
         strm->avail_in = len;
         /* XXX: make buf a CHERI cap */
-        strm->next_in = cheri_ptrperm((void*)buf, len, CHERI_PERM_LOAD);
+        strm->next_in_c = cheri_ptrperm((void*)buf, len, CHERI_PERM_LOAD);
         state->x.pos += len;
         if (gz_comp(state, Z_NO_FLUSH) == -1)
             return 0;
@@ -282,8 +282,8 @@ int ZEXPORT gzputc(file, c)
        initialized) */
     if (state->size) {
         if (strm->avail_in == 0)
-            strm->next_in = state->in;
-        have = (unsigned)((strm->next_in + strm->avail_in) - state->in);
+            strm->next_in_c = state->in;
+        have = (unsigned)((strm->next_in_c + strm->avail_in) - state->in);
         if (have < state->size) {
             state->in[have] = c;
             strm->avail_in++;
@@ -375,7 +375,7 @@ int ZEXPORTVA gzvprintf(gzFile file, const char *format, va_list va)
 
     /* update buffer and position, defer compression until needed */
     strm->avail_in = (unsigned)len;
-    strm->next_in = state->in;
+    strm->next_in_c = state->in;
     state->x.pos += len;
     return len;
 }
@@ -465,7 +465,7 @@ int ZEXPORTVA gzprintf (file, format, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10,
 
     /* update buffer and position, defer compression until needed */
     strm->avail_in = (unsigned)len;
-    strm->next_in = state->in;
+    strm->next_in_c = state->in;
     state->x.pos += len;
     return len;
 }
@@ -574,7 +574,7 @@ int ZEXPORT gzclose_w(file)
         ret = state->err;
     if (state->size) {
         if (!state->direct) {
-            (void)deflateEnd((z_streamp)&(state->strm));
+            (void)deflateEnd_c((z_streamp)&(state->strm));
             free((void*)state->out);
         }
         free((void*)state->in);

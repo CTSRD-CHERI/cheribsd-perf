@@ -32,12 +32,12 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     z_stream stream;
     int err;
 
-    stream.next_in = cheri_ptrperm((void*)source, sourceLen, CHERI_PERM_LOAD);
+    stream.next_in_c = cheri_ptrperm((void*)source, sourceLen, CHERI_PERM_LOAD);
     stream.avail_in = (uInt)sourceLen;
     /* Check for source > 64K on 16-bit machine: */
     if ((uLong)stream.avail_in != sourceLen) return Z_BUF_ERROR;
 
-    stream.next_out = cheri_ptrperm((void*)dest, *destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
+    stream.next_out_c = cheri_ptrperm((void*)dest, *destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
     stream.avail_out = (uInt)*destLen;
     if ((uLong)stream.avail_out != *destLen) return Z_BUF_ERROR;
 
@@ -49,15 +49,15 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     err = inflateInit((z_streamp)&stream);
     if (err != Z_OK) return err;
 
-    err = inflate((z_streamp)&stream, Z_FINISH);
+    err = inflate_c((z_streamp)&stream, Z_FINISH);
     if (err != Z_STREAM_END) {
-        inflateEnd((z_streamp)&stream);
+        inflateEnd_c((z_streamp)&stream);
         if (err == Z_NEED_DICT || (err == Z_BUF_ERROR && stream.avail_in == 0))
             return Z_DATA_ERROR;
         return err;
     }
     *destLen = stream.total_out;
 
-    err = inflateEnd((z_streamp)&stream);
+    err = inflateEnd_c((z_streamp)&stream);
     return err;
 }

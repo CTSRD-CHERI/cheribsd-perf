@@ -212,6 +212,19 @@ int ZEXPORT deflateInit_(strm, level, version, stream_size)
 }
 
 /* ========================================================================= */
+#include <stdio.h>
+int ZEXPORT deflateInit2(strm, level, method, windowBits, memLevel, strategy)
+    z_streamp_nocap strm;
+    int  level;
+    int  method;
+    int  windowBits;
+    int  memLevel;
+    int  strategy;
+{
+  return deflateInit2_c(cheri_ptr((void*)strm, sizeof(z_stream)),
+    level, method, windowBits, memLevel, strategy);
+}
+
 int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
                   version, stream_size)
     z_streamp strm;
@@ -234,9 +247,14 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
 
     if (version == Z_NULL || version[0] != my_version[0] ||
         stream_size != sizeof(z_stream)) {
+        printf("stream_size: %d, sizeof zstream: %d\n", (int)stream_size, (int)sizeof(z_stream));
         return Z_VERSION_ERROR;
     }
     if (strm == Z_NULL) return Z_STREAM_ERROR;
+
+    /* XXX: CHERI compatibility: next_in and next_out should not be changed after this, and avail_in and avail_out should not be incremented */
+    strm->next_in_c = cheri_ptrperm(strm->next_in, strm->avail_in, CHERI_PERM_LOAD);
+    strm->next_out_c = cheri_ptrperm(strm->next_out, strm->avail_out, CHERI_PERM_LOAD | CHERI_PERM_STORE);
 
     strm->msg = Z_NULL;
     if (strm->zalloc == (alloc_func)0) {
@@ -308,7 +326,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         s->pending_buf == Z_NULL) {
         s->status = FINISH_STATE;
         strm->msg = ERR_MSG(Z_MEM_ERROR);
-        deflateEnd (strm);
+        deflateEnd_c (strm);
         return Z_MEM_ERROR;
     }
     s->d_buf = overlay + s->lit_bufsize/sizeof(ush);
@@ -359,9 +377,9 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
 
     /* insert dictionary into window and hash */
     avail = strm->avail_in;
-    next = strm->next_in;
+    next = strm->next_in_c;
     strm->avail_in = dictLength;
-    strm->next_in = cheri_ptrperm((void*) dictionary, dictLength,
+    strm->next_in_c = cheri_ptrperm((void*) dictionary, dictLength,
       CHERI_PERM_LOAD);
     fill_window(s);
     while (s->lookahead >= MIN_MATCH) {
@@ -385,7 +403,7 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
     s->lookahead = 0;
     s->match_length = s->prev_length = MIN_MATCH-1;
     s->match_available = 0;
-    strm->next_in = next;
+    strm->next_in_c = next;
     strm->avail_in = avail;
     s->wrap = wrap;
     return Z_OK;
@@ -515,7 +533,7 @@ int ZEXPORT deflateParams(strm, level, strategy)
     if ((strategy != s->strategy || func != configuration_table[level].func) &&
         strm->total_in != 0) {
         /* Flush the last buffer: */
-        err = deflate(strm, Z_BLOCK);
+        err = deflate_c(strm, Z_BLOCK);
         if (err == Z_BUF_ERROR && s->pending == 0)
             err = Z_OK;
     }
@@ -656,8 +674,8 @@ local void flush_pending(strm)
     if (len == 0) return;
 
     /* XXX: temporary, convert to zmemcpy_c */
-    zmemcpy((void*)strm->next_out, s->pending_out, len);
-    strm->next_out  += len;
+    zmemcpy((void*)strm->next_out_c, s->pending_out, len);
+    strm->next_out_c  += len;
     s->pending_out  += len;
     strm->total_out += len;
     strm->avail_out  -= len;
@@ -669,6 +687,13 @@ local void flush_pending(strm)
 
 /* ========================================================================= */
 int ZEXPORT deflate (strm, flush)
+    z_streamp_nocap strm;
+    int flush;
+{
+  return deflate_c(cheri_ptr((void*)strm, sizeof(z_stream)), flush);
+}
+
+int ZEXPORT deflate_c (strm, flush)
     z_streamp strm;
     int flush;
 {
@@ -681,8 +706,8 @@ int ZEXPORT deflate (strm, flush)
     }
     s = strm->state;
 
-    if (strm->next_out == Z_NULL ||
-        (strm->next_in == Z_NULL && strm->avail_in != 0) ||
+    if (strm->next_out_c == Z_NULL ||
+        (strm->next_in_c == Z_NULL && strm->avail_in != 0) ||
         (s->status == FINISH_STATE && flush != Z_FINISH)) {
         ERR_RETURN(strm, Z_STREAM_ERROR);
     }
@@ -982,7 +1007,14 @@ int ZEXPORT deflate (strm, flush)
 }
 
 /* ========================================================================= */
+
 int ZEXPORT deflateEnd (strm)
+    z_streamp_nocap strm;
+{
+  return deflateEnd_c(cheri_ptr((void*)strm, sizeof(z_stream)));
+}
+
+int ZEXPORT deflateEnd_c (strm)
     z_streamp strm;
 {
     int status;
@@ -1051,7 +1083,7 @@ int ZEXPORT deflateCopy (dest, source)
 
     if (ds->window == Z_NULL || ds->prev == Z_NULL || ds->head == Z_NULL ||
         ds->pending_buf == Z_NULL) {
-        deflateEnd (dest);
+        deflateEnd_c (dest);
         return Z_MEM_ERROR;
     }
     /* following zmemcpy do not work for 16-bit MSDOS */
@@ -1092,7 +1124,7 @@ local int read_buf(strm, buf, size)
     strm->avail_in  -= len;
 
     /* XXX: temporary, convert to zmemcpy_c */
-    zmemcpy(buf, (void*)strm->next_in, len);
+    zmemcpy(buf, (void*)strm->next_in_c, len);
     if (strm->state->wrap == 1) {
         strm->adler = adler32(strm->adler, buf, len);
     }
@@ -1101,7 +1133,7 @@ local int read_buf(strm, buf, size)
         strm->adler = crc32(strm->adler, buf, len);
     }
 #endif
-    strm->next_in  += len;
+    strm->next_in_c  += len;
     strm->total_in += len;
 
     return (int)len;

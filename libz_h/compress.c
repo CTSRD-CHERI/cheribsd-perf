@@ -31,14 +31,14 @@ int ZEXPORT compress2 (dest, destLen, source, sourceLen, level)
     z_stream stream;
     int err;
 
-    stream.next_in =
+    stream.next_in_c =
       cheri_ptrperm((void *) source, sourceLen, CHERI_PERM_LOAD);
     stream.avail_in = (uInt)sourceLen;
 #ifdef MAXSEG_64K
     /* Check for source > 64K on 16-bit machine: */
     if ((uLong)stream.avail_in != sourceLen) return Z_BUF_ERROR;
 #endif
-    stream.next_out =
+    stream.next_out_c =
       cheri_ptrperm((void *) dest, *destLen, CHERI_PERM_LOAD | CHERI_PERM_STORE);
     stream.avail_out = (uInt)*destLen;
     if ((uLong)stream.avail_out != *destLen) return Z_BUF_ERROR;
@@ -51,15 +51,15 @@ int ZEXPORT compress2 (dest, destLen, source, sourceLen, level)
       (z_streamp)cheri_ptr(&stream, sizeof(z_stream)), level);
     if (err != Z_OK) return err;
 
-    err = deflate(
+    err = deflate_c(
       (z_streamp)cheri_ptr(&stream, sizeof(z_stream)), Z_FINISH);
     if (err != Z_STREAM_END) {
-        deflateEnd((z_streamp)cheri_ptr(&stream, sizeof(z_stream)));
+        deflateEnd_c((z_streamp)cheri_ptr(&stream, sizeof(z_stream)));
         return err == Z_OK ? Z_BUF_ERROR : err;
     }
     *destLen = stream.total_out;
 
-    err = deflateEnd((z_streamp)cheri_ptr(&stream, sizeof(z_stream)));
+    err = deflateEnd_c((z_streamp)cheri_ptr(&stream, sizeof(z_stream)));
     return err;
 }
 

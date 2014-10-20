@@ -179,6 +179,13 @@ int windowBits;
     return inflateReset(strm);
 }
 
+int ZEXPORT inflateInit2(strm, windowBits)
+z_streamp_nocap strm;
+int windowBits;
+{
+  return inflateInit2_c(cheri_ptr((void*)strm, sizeof(z_stream)), windowBits);
+}
+
 int ZEXPORT inflateInit2_(strm, windowBits, version, stream_size)
 z_streamp strm;
 int windowBits;
@@ -462,9 +469,9 @@ unsigned copy;
 /* Load registers with state in inflate() for speed */
 #define LOAD() \
     do { \
-        put = strm->next_out; \
+        put = strm->next_out_c; \
         left = strm->avail_out; \
-        next = strm->next_in; \
+        next = strm->next_in_c; \
         have = strm->avail_in; \
         hold = state->hold; \
         bits = state->bits; \
@@ -473,9 +480,9 @@ unsigned copy;
 /* Restore state from registers in inflate() */
 #define RESTORE() \
     do { \
-        strm->next_out = put; \
+        strm->next_out_c = put; \
         strm->avail_out = left; \
-        strm->next_in = next; \
+        strm->next_in_c = next; \
         strm->avail_in = have; \
         state->hold = hold; \
         state->bits = bits; \
@@ -607,6 +614,13 @@ unsigned copy;
  */
 
 int ZEXPORT inflate(strm, flush)
+z_streamp_nocap strm;
+int flush;
+{
+  return inflate_c(cheri_ptr((void*)strm, sizeof(z_stream)), flush);
+}
+
+int ZEXPORT inflate_c(strm, flush)
 z_streamp strm;
 int flush;
 {
@@ -630,8 +644,8 @@ int flush;
     static const unsigned short order[19] = /* permutation of code lengths */
         {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
 
-    if (strm == Z_NULL || strm->state == Z_NULL || strm->next_out == Z_NULL ||
-        (strm->next_in == Z_NULL && strm->avail_in != 0))
+    if (strm == Z_NULL || strm->state == Z_NULL || strm->next_out_c == Z_NULL ||
+        (strm->next_in_c == Z_NULL && strm->avail_in != 0))
         return Z_STREAM_ERROR;
 
     state = (struct inflate_state FAR *)strm->state;
@@ -1236,7 +1250,7 @@ int flush;
     RESTORE();
     if (state->wsize || (out != strm->avail_out && state->mode < BAD &&
             (state->mode < CHECK || flush != Z_FINISH)))
-        if (updatewindow(strm, strm->next_out, out - strm->avail_out)) {
+        if (updatewindow(strm, strm->next_out_c, out - strm->avail_out)) {
             state->mode = MEM;
             return Z_MEM_ERROR;
         }
@@ -1247,7 +1261,7 @@ int flush;
     state->total += out;
     if (state->wrap && out)
         strm->adler = state->check =
-            UPDATE(state->check, strm->next_out - out, out);
+            UPDATE(state->check, strm->next_out_c - out, out);
     strm->data_type = state->bits + (state->last ? 64 : 0) +
                       (state->mode == TYPE ? 128 : 0) +
                       (state->mode == LEN_ || state->mode == COPY_ ? 256 : 0);
@@ -1257,6 +1271,12 @@ int flush;
 }
 
 int ZEXPORT inflateEnd(strm)
+z_streamp_nocap strm;
+{
+  return inflateEnd_c(cheri_ptr((void*)strm, sizeof(z_stream)));
+}
+
+int ZEXPORT inflateEnd_c(strm)
 z_streamp strm;
 {
     struct inflate_state FAR *state;
@@ -1421,9 +1441,9 @@ z_streamp strm;
     }
 
     /* search available input */
-    len = syncsearch(&(state->have), strm->next_in, strm->avail_in);
+    len = syncsearch(&(state->have), strm->next_in_c, strm->avail_in);
     strm->avail_in -= len;
-    strm->next_in += len;
+    strm->next_in_c += len;
     strm->total_in += len;
 
     /* return no joy or set up to restart inflate() on a new block */

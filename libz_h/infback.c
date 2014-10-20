@@ -129,9 +129,9 @@ struct inflate_state FAR *state;
 /* Load returned state from inflate_fast() */
 #define LOAD() \
     do { \
-        put = strm->next_out; \
+        put = strm->next_out_c; \
         left = strm->avail_out; \
-        next = strm->next_in; \
+        next = strm->next_in_c; \
         have = strm->avail_in; \
         hold = state->hold; \
         bits = state->bits; \
@@ -140,9 +140,9 @@ struct inflate_state FAR *state;
 /* Set state from registers for inflate_fast() */
 #define RESTORE() \
     do { \
-        strm->next_out = put; \
+        strm->next_out_c = put; \
         strm->avail_out = left; \
-        strm->next_in = next; \
+        strm->next_in_c = next; \
         strm->avail_in = have; \
         state->hold = hold; \
         state->bits = bits; \
@@ -281,7 +281,7 @@ void FAR *out_desc;
     state->mode = TYPE;
     state->last = 0;
     state->whave = 0;
-    next = strm->next_in;
+    next = strm->next_in_c;
     have = next != Z_NULL ? strm->avail_in : 0;
     hold = 0;
     bits = 0;
@@ -625,7 +625,7 @@ void FAR *out_desc;
 
     /* Return unused input */
   inf_leave:
-    strm->next_in = next;
+    strm->next_in_c = next;
     strm->avail_in = have;
     return ret;
 }
