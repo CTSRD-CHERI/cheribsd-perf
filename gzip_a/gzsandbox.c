@@ -387,11 +387,12 @@ int gzsandbox(void * context)
 
 	while (1) {
 		fdcount = 2;
+    fprintf(stderr, "gzsandbox: calling lcs_recvrpc_rights\n");
 		if (lcs_recvrpc_rights(lchp, &opno, &seqno, &buffer, &len,
 		    fdarray, &fdcount) < 0) {
 			if (errno == EPIPE)
       {
-        printf("child: EPIPE: exiting\n");
+        fprintf(stderr, "child: EPIPE: exiting\n");
 				_Exit(-1);
       }
 			else

@@ -265,7 +265,8 @@ _cheri_fd_write_c(__capability const void *buf_c)
 		ret.cfr_retval1 = EPROT;
 		return (ret);
 	}
-	buf = (void *)buf_c;
+	//buf = (void *)buf_c;
+  buf = cheri_getbase(buf_c) + cheri_getoffset(buf_c); /* XXX: due to lack of CToPtr */
 
 	/* Check that cheri_fd hasn't been revoked. */
 	cfp = cheri_getidc();
@@ -305,8 +306,7 @@ cheri_fd_enter(register_t methodnum, register_t a1, register_t a2,
 	struct cheri_fd_ret ret;
 
   printf("cheri_fd_enter: methodnum = %d\n", (signed) methodnum);
-  printf("cheri_fd_enter: c3.base=%p, c3.len=%d, c3.offset=%p\n", (void*)c3, (signed)cheri_getlen(c3), cheri_getoffset(c3));
-  printf("first byte at c3.base: %c\n", *(char*)c3);
+  printf("cheri_fd_enter: (void*) c3: %p, c3.base=%ld, c3.len=%d, c3.offset=%p\n", (void*)c3, cheri_getbase(c3), (signed)cheri_getlen(c3), cheri_getoffset(c3));
 
 	switch (methodnum) {
 	case CHERI_FD_METHOD_FSTAT_C:
