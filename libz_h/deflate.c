@@ -250,11 +250,8 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         printf("stream_size: %d, sizeof zstream: %d\n", (int)stream_size, (int)sizeof(z_stream));
         return Z_VERSION_ERROR;
     }
+    printf("strm: %p, strm->next_in: %p\n", (void*)strm, strm->next_in);
     if (strm == Z_NULL) return Z_STREAM_ERROR;
-
-    /* XXX: CHERI compatibility: next_in and next_out should not be changed after this, and avail_in and avail_out should not be incremented */
-    strm->next_in_c = cheri_ptrperm(strm->next_in, strm->avail_in, CHERI_PERM_LOAD);
-    strm->next_out_c = cheri_ptrperm(strm->next_out, strm->avail_out, CHERI_PERM_LOAD | CHERI_PERM_STORE);
 
     strm->msg = Z_NULL;
     if (strm->zalloc == (alloc_func)0) {

@@ -119,8 +119,19 @@ gz_compress_insandbox(int in, int out, off_t *gsizep, const char *origname,
   fdarray[1] = cap_new(out, out_rights);
   if (fdarray[0] == -1 || fdarray[1] == -1)
     err(-1, "cap_new");
-	if (lch_rpc_rights(lcsp, PROXIED_GZ_COMPRESS, &iov_req, 1,
-	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
+  struct host_rpc_params params;
+  params.scb = lcsp;
+  params.opno = PROXIED_GZ_COMPRESS;
+  params.req = &iov_req;
+  params.reqcount = 1;
+  params.req_fdp = fdarray;
+  params.req_fdcount = 2;
+  params.rep = &iov_rep;
+  params.repcount = 1;
+  params.replenp = &len;
+  params.rep_fdp = NULL;
+  params.rep_fdcountp = NULL;
+	if (lch_rpc_rights_fix(&params) < 0)
 		err(-1, "lch_rpc_rights");
 	if (len != sizeof(rep))
 		errx(-1, "lch_rpc_rights len %zu", len);
@@ -207,8 +218,19 @@ gz_uncompress_insandbox(int in, int out, char *pre, size_t prelen,
   fdarray[1] = cap_new(out, out_rights);
   if (fdarray[0] == -1 || fdarray[1] == -1)
     err(-1, "cap_new");
-	if (lch_rpc_rights(lcsp, PROXIED_GZ_UNCOMPRESS, iov_req, 1,
-	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
+  struct host_rpc_params params;
+  params.scb = lcsp;
+  params.opno = PROXIED_GZ_UNCOMPRESS;
+  params.req = iov_req;
+  params.reqcount = 1;
+  params.req_fdp = fdarray;
+  params.req_fdcount = 2;
+  params.rep = &iov_rep;
+  params.repcount = 1;
+  params.replenp = &len;
+  params.rep_fdp = NULL;
+  params.rep_fdcountp = NULL;
+	if (lch_rpc_rights_fix(&params) < 0)
 		err(-1, "lch_rpc_rights");
 	if (len != sizeof(rep))
 		errx(-1, "lch_rpc_rights len %zu", len);
@@ -291,8 +313,19 @@ unbzip2_insandbox(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
   fdarray[1] = cap_new(out, out_rights);
   if (fdarray[0] == -1 || fdarray[1] == -1)
     err(-1, "cap_new");
-	if (lch_rpc_rights(lcsp, PROXIED_UNBZIP2, iov_req, 1,
-	    fdarray, 2, &iov_rep, 1, &len, NULL, NULL) < 0)
+  struct host_rpc_params params;
+  params.scb = lcsp;
+  params.opno = PROXIED_UNBZIP2;
+  params.req = &iov_req;
+  params.reqcount = 1;
+  params.req_fdp = fdarray;
+  params.req_fdcount = 2;
+  params.rep = &iov_rep;
+  params.repcount = 1;
+  params.replenp = &len;
+  params.rep_fdp = NULL;
+  params.rep_fdcountp = NULL;
+	if (lch_rpc_rights_fix(&params) < 0)
 		err(-1, "lch_rpc_rights");
 	if (len != sizeof(rep))
 		errx(-1, "lch_rpc_rights len %zu", len);
@@ -357,7 +390,10 @@ int gzsandbox(void * context)
 		if (lcs_recvrpc_rights(lchp, &opno, &seqno, &buffer, &len,
 		    fdarray, &fdcount) < 0) {
 			if (errno == EPIPE)
-				exit(-1);
+      {
+        printf("child: EPIPE: exiting\n");
+				_Exit(-1);
+      }
 			else
 				err(-1, "lcs_recvrpc_rights");
 		}
@@ -368,7 +404,7 @@ int gzsandbox(void * context)
 				errx(-1, "sandbox_workloop: %d fds", fdcount);
 			sandbox_gz_compress_buffer(lchp, opno, seqno, buffer,
 			    len, fdarray[0], fdarray[1]);
-      printf("sandbox: will leave now\n");
+      warnx("proxied gz compress complete\n");
 			close(fdarray[0]);
 			close(fdarray[1]);
 			break;

@@ -151,6 +151,8 @@ _sandbox_rpc_recv(int fd, void *buf, size_t len, int flags)
 {
 	ssize_t retlen;
 
+  fprintf(stderr, "_sandbox_rpc_recv: fd=%d, buf=%p, len=%lu, flags=%d\n", fd, buf, (unsigned long) len, flags);
+
 	if (fd == -1 || fd == 0) {
 		errno = ESRCH;
 		return (-1);

@@ -87,7 +87,7 @@ sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), vo
     /* TODO: limit fd_host_end? */
     //close(scb->fd_host_end);
     int rc = sandbox_mainfn(context);
-    printf("mainfn returned %d\n", rc);
+    fprintf(stderr, "mainfn returned %d\n", rc);
     _Exit(rc);
 	}
   else
@@ -257,11 +257,35 @@ host_sendrpc_internal(struct sandbox_cb *scb, u_int32_t opno, u_int32_t seqno,
  * don't need retransmission, and are synchronous.  However, it might not be
  * a bad idea to use them anyway.
  */
+
+/*
 static int
 host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
     int reqcount, int *req_fdp, int req_fdcount, struct iovec *rep,
     int repcount, size_t *replenp, int *rep_fdp, int *rep_fdcountp)
 {
+  fprintf(stderr, "ERROR: host_rpc_internal was called\n");
+  exit(1);
+}
+*/
+
+static int
+host_rpc_internal_fix(struct host_rpc_params * params)
+{
+  struct sandbox_cb *scb = params->scb;
+  u_int32_t opno = params->opno;
+  struct iovec *req = params->req;
+  int reqcount = params->reqcount;
+  int *req_fdp = params->req_fdp;
+  int req_fdcount = params->req_fdcount;
+  struct iovec *rep = params->rep;
+  int repcount = params->repcount;
+  size_t *replenp = params->replenp;
+  int *rep_fdp = params->rep_fdp;
+  int *rep_fdcountp = params->rep_fdcountp;
+
+  fprintf(stderr, "repcount: %d\n", repcount);
+  fprintf(stderr, "on entry replenp: %p\n", replenp);
 	struct sandboxrpc_request_hdr req_hdr;
 	struct sandboxrpc_reply_hdr rep_hdr;
 	size_t left, off, space, totlen, want;
@@ -325,7 +349,7 @@ host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 		return (-1);
 	}
 
-  printf("[%d]: received rpc from sandbox\n", getpid());
+  fprintf(stderr, "[%d] received rpc from sandbox\n", getpid());
 
 	if (rep_hdr.sandboxrpc_rephdr_magic != SANDBOX_RPC_REPLY_HDR_MAGIC ||
 	    rep_hdr.sandboxrpc_rephdr_seqno != 0 ||
@@ -337,14 +361,18 @@ host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 		return (-1);
 	}
 
+  fprintf(stderr, "rep_fdp buffer: %p\n", rep_fdp);
+
 	/*
 	 * Receive the user data.  Notice that we can partially overwrite the
 	 * user buffer but still receive an error.
 	 */
 	totlen = 0;
 	for (i = 0; i < repcount; i++) {
+    fprintf(stderr, "receiving rep %d of %d\n", i, repcount);
 		off = 0;
 		while (totlen < rep_hdr.sandboxrpc_rephdr_datalen) {
+      fprintf(stderr, "totlen: %d, datalen: %d\n", (int)totlen, (int)rep_hdr.sandboxrpc_rephdr_datalen);
 			space = rep[i].iov_len - off;
 			left = rep_hdr.sandboxrpc_rephdr_datalen - totlen;
 			want = (space > left) ? space : left;
@@ -353,7 +381,9 @@ host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 			    want, MSG_WAITALL);
 			if (len < 0)
 				return (-1);
+      fprintf(stderr, "len: %d, want: %d\n", (int)len,(int)want);
 			if ((size_t)len != want) {
+        fprintf(stderr, "len != want\n");
 				if (rep_fdp != NULL)
 					_sandbox_dispose_rights(rep_fdp,
 					    *rep_fdcountp);
@@ -364,14 +394,17 @@ host_rpc_internal(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 			totlen += len;
 			if (rep[i].iov_len == off)
 				break;
+      fprintf(stderr, "continue\n");
 		}
 		if (totlen == rep_hdr.sandboxrpc_rephdr_datalen)
 			break;
 	}
+  fprintf(stderr, "on exit replenp: %p\n", replenp);
 	*replenp = totlen;
 	return (0);
 }
 
+/*
 int
 host_rpc(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
     int reqcount, struct iovec *rep, int repcount, size_t *replenp)
@@ -389,6 +422,13 @@ host_rpc_rights(struct sandbox_cb *scb, u_int32_t opno, struct iovec *req,
 
 	return (host_rpc_internal(scb, opno, req, reqcount, req_fdp,
 	    req_fdcount, rep, repcount, replenp, rep_fdp, rep_fdcountp));
+}
+*/
+
+int
+host_rpc_rights_fix(struct host_rpc_params * params)
+{
+	return host_rpc_internal_fix(params);
 }
 
 int
@@ -455,6 +495,8 @@ sandbox_recvrpc_internal(struct sandbox_cb *scb, u_int32_t *opnop,
 	ssize_t len;
 	u_char *buffer;
 	int error;
+
+  fprintf(stderr, "[%d] waiting for recv...\n", getpid());
 
 	if (fdp != NULL)
 		len = _sandbox_rpc_recv_rights(scb->fd_sandbox_end, &req_hdr,
@@ -554,7 +596,7 @@ static int
 sandbox_sendrpc_internal(struct sandbox_cb *scb, u_int32_t opno, u_int32_t seqno,
     struct iovec *rep, int repcount, int *fdp, int fdcount)
 {
-  printf("[%d] sending response rpc\n", getpid());
+  fprintf(stderr, "[%d] sending response rpc\n", getpid());
 	struct sandboxrpc_reply_hdr rep_hdr;
 	ssize_t len;
 	int i;

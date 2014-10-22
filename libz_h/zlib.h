@@ -83,13 +83,11 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 struct internal_state;
 
 typedef struct z_stream_s {
-    z_const Bytef *next_in; /* so that gzip need not be modified */
-    __capability z_const Bytef *next_in_c;     /* next input byte */
+    __capability z_const Bytef *next_in;     /* next input byte */
     uInt     avail_in;  /* number of bytes available at next_in */
     uLong    total_in;  /* total number of input bytes read so far */
 
-    Bytef *next_out; /* so that gzip need not be modified */
-    __capability Bytef    *next_out_c; /* next output byte should be put there */
+    __capability Bytef    *next_out; /* next output byte should be put there */
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 

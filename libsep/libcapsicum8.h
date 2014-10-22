@@ -39,6 +39,7 @@ lcs_get (struct lc_host ** lchpp);
 #define lch_recv_rights     host_recv_rights
 #define lch_rpc             host_rpc
 #define lch_rpc_rights      host_rpc_rights
+#define lch_rpc_rights_fix  host_rpc_rights_fix
 #define lch_send            host_send
 #define lch_send_rights     host_send_rights
 

@@ -38,6 +38,23 @@ struct sandboxrpc_reply_hdr {
 } __packed;
 
 #include <sys/uio.h>
+
+struct host_rpc_params
+{
+  struct sandbox_cb *scb;
+  u_int32_t opno;
+  struct iovec *req;
+  int reqcount;
+  int *req_fdp;
+  int req_fdcount;
+  struct iovec *rep;
+  int repcount;
+  size_t *replenp;
+  int *rep_fdp;
+  int *rep_fdcountp;
+};
+int host_rpc_rights_fix(struct host_rpc_params * params);
+
 /* Prototypes */
 void sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void*), void * context);
 
