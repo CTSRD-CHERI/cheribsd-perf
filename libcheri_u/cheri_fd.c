@@ -265,8 +265,9 @@ _cheri_fd_write_c(__capability const void *buf_c)
 		ret.cfr_retval1 = EPROT;
 		return (ret);
 	}
-	//buf = (void *)buf_c;
-  buf = cheri_getbase(buf_c) + cheri_getoffset(buf_c); /* XXX: due to lack of CToPtr */
+	buf = (void *)buf_c;
+  printf("(did cast)\n");
+  //buf = cheri_getbase(buf_c) + cheri_getoffset(buf_c); /* XXX: due to lack of CToPtr */
 
 	/* Check that cheri_fd hasn't been revoked. */
 	cfp = cheri_getidc();

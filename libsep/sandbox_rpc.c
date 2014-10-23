@@ -202,8 +202,8 @@ _sandbox_rpc_recv_rights(int fd, void *buf, size_t len, int flags, int *fdp,
 	do {
     fprintf(stderr, "_sandbox_rpc_recv_rights: waiting on recvmsg...\n");
 		retlen = recvmsg(fd, &msghdr, flags);
+    fprintf(stderr, "_sandbox_rpc_recv_rights: recvmsg done\n");
 	} while (retlen < 0 && errno == EINTR);
-  fprintf(stderr, "_sandbox_rpc_recv_rights: recvmsg done\n");
 
 	if (retlen < 0)
 		return (-1);

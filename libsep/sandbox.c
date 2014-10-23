@@ -85,13 +85,14 @@ sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), vo
       _Exit(1);
     }
     /* TODO: limit fd_host_end? */
-    //close(scb->fd_host_end);
+    close(scb->fd_host_end);
     int rc = sandbox_mainfn(context);
     fprintf(stderr, "mainfn returned %d\n", rc);
     _Exit(rc);
 	}
   else
   {
+    close(scb->fd_sandbox_end);
     /* Update sandbox pid in control block */
     scb->sandbox_pid = pid;
   }
