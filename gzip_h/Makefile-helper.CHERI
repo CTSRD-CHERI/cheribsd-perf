@@ -42,5 +42,7 @@ gzsandbox-helper.bin: gzsandbox-helper
 .include <bsd.prog.mk>
 
 push:
-		scp gzsandbox-helper.bin $(CHERI_SSH_HOST):~/gzsandbox-helper.bin
+		/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8889 gzsandbox-helper.bin gzsandbox-helper.bin
+
+		#scp gzsandbox-helper.bin $(CHERI_SSH_HOST):~/gzsandbox-helper.bin
 

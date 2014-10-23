@@ -304,7 +304,7 @@ static const struct option longopts[] = {
 #endif
 
 void
-gzsandbox_test(void);
+gzsandbox_test(int infd_fileno, int outfd_fileno);
 
 int
 main(int argc, char **argv)
@@ -317,7 +317,11 @@ main(int argc, char **argv)
 	int ch;
 
   printf("testing\n");
-  gzsandbox_test();
+  int infd_fileno = open("input.gzip", O_RDONLY);
+  if (infd_fileno < 0) err(-1, "open: input.gzip");
+  int outfd_fileno = open("output.gzip", O_WRONLY | O_CREAT);
+  if (outfd_fileno < 0) err(-1, "open: output.gzip");
+  gzsandbox_test(infd_fileno, outfd_fileno);
 
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)

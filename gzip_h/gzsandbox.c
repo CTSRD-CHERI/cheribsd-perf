@@ -21,7 +21,7 @@ static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
 
 void
-gzsandbox_test(void);
+gzsandbox_test(int infd_fileno, int outfd_fileno);
 static void
 gzsandbox_initialize(void);
 #include "gzsandbox-helper.h"
@@ -33,23 +33,30 @@ gzsandbox_initialize(void);
 #define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
 
 void
-gzsandbox_test(void)
+gzsandbox_test(int infd_fileno, int outfd_fileno)
 {
   register_t v;
-  struct cheri_object stderr_fd;
+  struct cheri_object infd, outfd, stderrfd;
 
   printf("initializing...\n");
   gzsandbox_initialize();
 
-  /* create cheri_fd for STDERR */
-  if (cheri_fd_new(STDERR_FILENO, &stderr_fd) < 0)
-    err(-1, "cheri_fd_new: stderr");
+  /* create cheri_fd objects */
+  if (cheri_fd_new(STDERR_FILENO, &stderrfd) < 0)
+    err(-1, "cheri_fd_new: STDERR_FILENO");
+
+  if (cheri_fd_new(infd_fileno, &infd) < 0)
+    err(-1, "cheri_fd_new: infd_fileno");
+  
+  if (cheri_fd_new(outfd_fileno, &outfd) < 0)
+    err(-1, "cheri_fd_new: outfd_fileno");
   
   printf("invoking...\n");
   v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
             0, 0, 0, 0, 0, 0, 0,
-            stderr_fd.co_codecap, stderr_fd.co_datacap, cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+            infd.co_codecap, infd.co_datacap,
+            outfd.co_codecap, outfd.co_datacap,
+            stderrfd.co_codecap, stderrfd.co_datacap,
             cheri_zerocap(), cheri_zerocap());
   printf("invoked.\n");
 }
