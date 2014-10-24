@@ -66,6 +66,7 @@ __FBSDID("$FreeBSD$");
 #include <time.h>
 
 #include "gzip.h"
+#include "gzsandbox-helper.h"
 
 /* what type of file are we dealing with */
 enum filetype {

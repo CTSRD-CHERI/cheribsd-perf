@@ -14,8 +14,11 @@ extern __capability void	*cheri_system_type;
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <zlib.h>
+
+#include "gzsandbox-helper.h"
 
 #define BUFLEN		(64 * 1024)
 #define GZIP_MAGIC0	0x1F
@@ -34,12 +37,9 @@ static int	numflag = 6;		/* gzip -1..-9 value */
 
 int
 invoke(register_t op,
-  __capability void * co_codecap_infd,
-  __capability void * co_datacap_infd,
-  __capability void * co_codecap_outfd,
-  __capability void * co_datacap_outfd,
   __capability void * co_codecap_stderrfd,
-  __capability void * co_datacap_stderrfd);
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams);
 
 off_t
 gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime);
@@ -63,7 +63,7 @@ void
 maybe_err(const char *fmt, ...)
 {
   write_c(stderrfd, fmt, lenstr(fmt)+1);
-  _Exit(1);
+  exit(2);
 }
 void
 maybe_warn(const char *fmt, ...)
@@ -115,6 +115,7 @@ const char * i2a (int n)
   return &s[i];
 }
 
+#if 0
 void printfs (char * dst, const char * format, ...);
 void printfs (char * dst, const char * format, ...)
 {
@@ -128,7 +129,6 @@ void printfs (char * dst, const char * format, ...)
       case 0: /* parsing next char */
         if (*format == '%') state = 1;
         else *(dst++) = *format;
-        format++;
         break;
       case 1: /* just parsed '%' */
         if (*format == 'u')
@@ -142,7 +142,7 @@ void printfs (char * dst, const char * format, ...)
             for (l=0; n; n/=10, l++);
               dst[l] = "0123456789"[n%10];
             /* reverse */
-            for (i=0; i<l/2; i++)
+            for (i=0; 0&&i<l/2; i++)
             {
               char c = dst[i];
               dst[i] = dst[l-i];
@@ -151,12 +151,16 @@ void printfs (char * dst, const char * format, ...)
             dst += l;
           }
         }
+        else *(dst++) = *format;
+        state = 0;
         break;
     }
+    format++;
   }
   va_end(vl);
   *dst = 0;
 }
+#endif /* 0 */
 
 size_t lenstr (const char * str)
 {
@@ -196,44 +200,34 @@ void * cpymem (void * dst, const void * src, size_t num)
   return cdst;
 }
 
-static char buf[512];
-
 int
 invoke(register_t op,
-  __capability void * co_codecap_infd,
-  __capability void * co_datacap_infd,
-  __capability void * co_codecap_outfd,
-  __capability void * co_datacap_outfd,
   __capability void * co_codecap_stderrfd,
-  __capability void * co_datacap_stderrfd)
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams)
 {
-  struct cheri_fd_ret rc;
+  __capability struct gz_params * params = vparams;
   /* reconstruct the cheri_objects */
-  struct cheri_object infd, outfd;
-  infd.co_codecap = co_codecap_infd;
-  infd.co_datacap = co_datacap_infd;
-  outfd.co_codecap = co_codecap_outfd;
-  outfd.co_datacap = co_datacap_outfd;
-  stderrfd.co_codecap = co_codecap_stderrfd;
-  stderrfd.co_datacap = co_datacap_stderrfd;
-
-  rc = cheri_fd_read_c(infd, cheri_ptr(buf, sizeof buf));
-  int n = rc.cfr_retval0;
-
-  rc = cheri_fd_write_c(stderrfd, CHERI_STR_PTR("return code from read():"));
-  
-  rc = cheri_fd_write_c(stderrfd, CHERI_STR_PTR(i2a(n)));
-
-  rc = cheri_fd_write_c(stderrfd, CHERI_STR_PTR("\n"));
-
-  rc = cheri_fd_write_c(outfd, cheri_ptr(buf, n));
-  
-  rc = cheri_fd_write_c(stderrfd, CHERI_STR_PTR(i2a(rc.cfr_retval0)));
-
-  /* no stdlib */ /*fprintf(stderr, "in invoke()!\n");*/
-  /*cheri_system_puts(CHERI_STR_PTR("in invoke()!\n"));*/
-  (void) op;
-  return 0x5678;
+  if (op == GZSANDBOX_HELPER_OP_INIT)
+  {
+    stderrfd.co_codecap = co_codecap_stderrfd;
+    stderrfd.co_datacap = co_datacap_stderrfd;
+  }
+  else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
+    op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
+  {
+    if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
+      return gz_compress(params->infd, params->outfd,
+        params->gsizep, params->origname, params->mtime);
+    else if (op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
+      ;
+  }
+/*
+  char strbuf[512];
+  sprintf(strbuf, "return code from read(): %u*^\n", (int) i2a(n));
+  write_c(stderrfd, strbuf, strlen(strbuf)+1);
+*/
+  return 0;
 }
 
 /* compress input to output. Return bytes read, -1 on error */
