@@ -10,9 +10,11 @@
 extern __capability void	*cheri_system_type;
 #include <cheri/cheri_system.h>
 
-#include <errno.h>
-#include <stdarg.h>
+//#include "gzsandbox-libc.h"
+
+/* libc_cheri provides implementation */
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -44,14 +46,6 @@ invoke(register_t op,
 off_t
 gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime);
 
-#define CHERI_STR_PTR(str)  cheri_ptr((void*)(str), 1+lenstr((str)))
-
-size_t lenstr (const char * str);
-char * cpystr (char * dst, const char * src);
-void * setmem (void * ptr, int value, size_t num);
-void * cpymem (void * dst, const void * src, size_t num);
-const char * i2a (int n);
-
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
 
@@ -62,18 +56,18 @@ static	void	maybe_warnx(const char *fmt, ...) __printflike(1, 2);
 void
 maybe_err(const char *fmt, ...)
 {
-  write_c(stderrfd, fmt, lenstr(fmt)+1);
+  write_c(stderrfd, fmt, strlen(fmt)+1);
   exit(2);
 }
 void
 maybe_warn(const char *fmt, ...)
 {
-  write_c(stderrfd, fmt, lenstr(fmt)+1);
+  write_c(stderrfd, fmt, strlen(fmt)+1);
 }
 void
 maybe_warnx(const char *fmt, ...)
 {
-  write_c(stderrfd, fmt, lenstr(fmt)+1);
+  write_c(stderrfd, fmt, strlen(fmt)+1);
 }
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
@@ -92,113 +86,30 @@ ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
   return rc.cfr_retval0;
 }
 
-const char * i2a (int n)
-{
-  static char s[50];
-  int neg=0, i;
-  if (n == 0)
-  {
-    s[0] = '0';
-    s[1] = '\0';
-    return s;
-  }
-  if (n < 0)
-  {
-    neg = 1;
-    n = -n;
-  }
-  s[(sizeof s)-1] = '\0';
-  for (i=(sizeof s)-2; n; n/=10, i--)
-    s[i] = "0123456789"[n%10];
-  if (neg) s[i] = '-';
-  else i++;
-  return &s[i];
-}
+#define printf_c(...) \
+  do { \
+    char buf[512]; \
+    sprintf(buf, __VA_ARGS__); \
+    write_c(stderrfd, buf, strlen(buf)+1); \
+  } while (0)
 
 #if 0
-void printfs (char * dst, const char * format, ...);
-void printfs (char * dst, const char * format, ...)
+int printf_c (const char * restrict format, ...); /* XXX: write_c()s to stderrfd */
+int printf_c (const char * restrict format, ...)
 {
+  char buf[512];
   va_list vl;
+  int n;
   va_start(vl, format);
-  int state = 0;
-  while (*format)
-  {
-    switch (state)
-    {
-      case 0: /* parsing next char */
-        if (*format == '%') state = 1;
-        else *(dst++) = *format;
-        break;
-      case 1: /* just parsed '%' */
-        if (*format == 'u')
-        {
-          /* copy int to output */
-          int n = va_arg(vl, int);
-          if (!n) *(dst++) = '0';
-          else
-          {
-            int l,i;
-            for (l=0; n; n/=10, l++);
-              dst[l] = "0123456789"[n%10];
-            /* reverse */
-            for (i=0; 0&&i<l/2; i++)
-            {
-              char c = dst[i];
-              dst[i] = dst[l-i];
-              dst[l-i] = c;
-            }
-            dst += l;
-          }
-        }
-        else *(dst++) = *format;
-        state = 0;
-        break;
-    }
-    format++;
-  }
+  write_c(stderrfd, "test\n", 6);
+  n = vsnprintf(buf, sizeof buf, format, vl);
   va_end(vl);
-  *dst = 0;
+  if (n < 0) return n;
+  n++;
+  write_c(stderrfd, "test\n", 6);
+  return write_c(stderrfd, buf, n);
 }
 #endif /* 0 */
-
-size_t lenstr (const char * str)
-{
-  size_t len;
-  len = 0;
-  while (*str)
-    str++, len++;
-  return len;
-}
-
-char * cpystr (char * dst, const char * src)
-{
-  char * p;
-  p = dst;
-  while (*src)
-    *(p++) = *(src++);
-  *p = 0;
-  return dst;
-}
-
-void * setmem (void * ptr, int value, size_t num)
-{
-  char * cptr = ptr;
-  size_t i;
-  for (i=0; i<num; i++)
-    cptr[i] = value;
-  return ptr;
-}
-
-void * cpymem (void * dst, const void * src, size_t num)
-{
-  char * cdst = dst;
-  const char * csrc = src;
-  size_t i;
-  for (i=0; i<num; i++)
-    cdst[i] = csrc[i];
-  return cdst;
-}
 
 int
 invoke(register_t op,
@@ -212,6 +123,12 @@ invoke(register_t op,
   {
     stderrfd.co_codecap = co_codecap_stderrfd;
     stderrfd.co_datacap = co_datacap_stderrfd;
+    write_c(stderrfd, "hello\n", 6);
+    printf_c("in invoke(), initialized.\n");
+    char tmpbuf[512];
+    //sprintf(tmpbuf, "hello...\n");
+    strcpy(tmpbuf, "hello...\n");
+    write_c(stderrfd, tmpbuf, 10);
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
@@ -222,11 +139,6 @@ invoke(register_t op,
     else if (op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
       ;
   }
-/*
-  char strbuf[512];
-  sprintf(strbuf, "return code from read(): %u*^\n", (int) i2a(n));
-  write_c(stderrfd, strbuf, strlen(strbuf)+1);
-*/
   return 0;
 }
 
@@ -248,18 +160,19 @@ gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, cons
 
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
+  printf_c("inbufp: %p\n", inbufp);
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
 	}
 
-	setmem(&z, 0, sizeof z);
+	memset(&z, 0, sizeof z);
 	z.zalloc = Z_NULL;
 	z.zfree = Z_NULL;
 	z.opaque = 0;
 
 #ifdef SMALL
-	cpymem(outbufp, header, sizeof header);
+	memcpy(outbufp, header, sizeof header);
 	i = sizeof header;
 #else
 	if (nflag != 0) {

@@ -52,11 +52,11 @@ gzsandbox_test(int infd_fileno, int outfd_fileno)
     err(-1, "cheri_fd_new: outfd_fileno");
   
   printf("invoking...\n");
-  v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
+  v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
             0, 0, 0, 0, 0, 0, 0,
-            infd.co_codecap, infd.co_datacap,
-            outfd.co_codecap, outfd.co_datacap,
             stderrfd.co_codecap, stderrfd.co_datacap,
+            cheri_zerocap(), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
   printf("invoked.\n");
 }
