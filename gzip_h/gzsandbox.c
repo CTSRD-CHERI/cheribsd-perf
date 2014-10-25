@@ -28,44 +28,15 @@ static struct    sandbox_object * sbop;
 
 #define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
 
-void
-gzsandbox_test(int infd_fileno, int outfd_fileno, struct gz_init_params params);
-
 static void
 gzsandbox_initialize(void);
-
-void
-gzsandbox_test(int infd_fileno, int outfd_fileno, struct gz_init_params params)
-{
-  register_t v;
-  struct cheri_object infd, outfd, stderrfd;
-
-  printf("initializing...\n");
-  gzsandbox_initialize();
-
-  /* create cheri_fd objects */
-  if (cheri_fd_new(STDERR_FILENO, &stderrfd) < 0)
-    err(-1, "cheri_fd_new: STDERR_FILENO");
-
-  if (cheri_fd_new(infd_fileno, &infd) < 0)
-    err(-1, "cheri_fd_new: infd_fileno");
-  
-  if (cheri_fd_new(outfd_fileno, &outfd) < 0)
-    err(-1, "cheri_fd_new: outfd_fileno");
-
-  printf("invoking...\n");
-  v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
-            0, 0, 0, 0, 0, 0, 0,
-            stderrfd.co_codecap, stderrfd.co_datacap,
-            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap());
-  printf("invoked.\n");
-}
 
 static void
 gzsandbox_initialize(void)
 {
+  struct cheri_object stderrfd;
+  struct gz_init_params params;
+
 	if (gzsandbox_initialized)
 		return;
 	gzsandbox_initialized = 1;
@@ -75,6 +46,24 @@ gzsandbox_initialize(void)
 
   if (sandbox_object_new(sbcp, &sbop))
     err(-1, "sandbox_object_new");
+
+  if (cheri_fd_new(STDERR_FILENO, &stderrfd) < 0)
+    err(-1, "cheri_fd_new: STDERR_FILENO");
+
+  params.numflag = numflag;
+  params.nflag = nflag;
+  params.qflag = qflag;
+  params.tflag = tflag;
+  
+  printf("INVOKE\n");
+  if (sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
+            0, 0, 0, 0, 0, 0, 0,
+            stderrfd.co_codecap, stderrfd.co_datacap,
+            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap()))
+    err(-1, "sandbox_object_cinvoke");
+  printf("INVOKED\n");
 }
 
 off_t
@@ -94,11 +83,21 @@ off_t
 gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
     uint32_t mtime)
 {
-  return -1;
-  (void) in;
-  (void) out;
-  (void) gsizep;
-  (void) origname;
-  (void) mtime;
+  gzsandbox_initialize();
+  struct gz_params params;
+  memset(&params, 0, sizeof params);
+  if (cheri_fd_new(in, &params.infd) < 0)
+    err(-1, "cheri_fd_new: in");
+  if (cheri_fd_new(out, &params.outfd) < 0)
+    err(-1, "cheri_fd_new: out");
+  params.gsizep = cheri_ptrperm(gsizep, sizeof *gsizep, CHERI_PERM_STORE);
+  params.origname = cheri_ptrperm((void*)origname, strlen(origname)+1, CHERI_PERM_LOAD);
+  params.mtime = mtime;
+  return sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
+            0, 0, 0, 0, 0, 0, 0,
+            cheri_zerocap(), cheri_zerocap(),
+            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap(),
+            cheri_zerocap(), cheri_zerocap());
 }
 

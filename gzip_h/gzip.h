@@ -40,6 +40,10 @@
  */
 extern int	numflag;
 
+extern int nflag;
+extern int qflag;
+extern int tflag;
+
 off_t	gz_compress(int in, int out, off_t *gsizep, const char *origname,
 	    uint32_t mtime);
 off_t	gz_compress_wrapper(int in, int out, off_t *gsizep,

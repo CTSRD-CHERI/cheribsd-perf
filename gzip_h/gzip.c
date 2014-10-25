@@ -202,11 +202,11 @@ int	numflag = 6;		/* gzip -1..-9 value */
 #ifndef SMALL
 static	int	fflag;			/* force mode */
 static	int	kflag;			/* don't delete input files */
-static	int	nflag;			/* don't save name/timestamp */
+int	nflag;			/* don't save name/timestamp */
 static	int	Nflag;			/* don't restore name/timestamp */
-static	int	qflag;			/* quiet mode */
+int	qflag;			/* quiet mode */
 static	int	rflag;			/* recursive mode */
-static	int	tflag;			/* test */
+int	tflag;			/* test */
 static	int	vflag;			/* verbose mode */
 static	const char *remove_file = NULL;	/* file to be removed upon SIGINT */
 #else
@@ -304,9 +304,6 @@ static const struct option longopts[] = {
 };
 #endif
 
-void
-gzsandbox_test(int infd_fileno, int outfd_fileno, struct gz_init_params params);
-
 int
 main(int argc, char **argv)
 {
@@ -316,19 +313,6 @@ main(int argc, char **argv)
 	int len;
 #endif
 	int ch;
-
-  struct gz_init_params params;
-  params.numflag = numflag;
-  params.nflag = nflag;
-  params.qflag = qflag;
-  params.tflag = tflag;
-  
-  printf("testing\n");
-  int infd_fileno = open("input.gzip", O_RDONLY);
-  if (infd_fileno < 0) err(-1, "open: input.gzip");
-  int outfd_fileno = open("output.gzip", O_WRONLY | O_CREAT);
-  if (outfd_fileno < 0) err(-1, "open: output.gzip");
-  gzsandbox_test(infd_fileno, outfd_fileno, params);
 
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)

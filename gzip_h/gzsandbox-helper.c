@@ -129,21 +129,35 @@ invoke(register_t op,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams)
 {
+  __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Winline-asm"
+  __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
+#pragma clang diagnostic pop
+  static int initialized = 0;
+  if (initialized)
+    fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
   /* reconstruct the cheri_objects */
-  if (op == GZSANDBOX_HELPER_OP_INIT)
+  if (!initialized)
   {
-    __capability struct gz_init_params * params = vparams;
-    stderrfd.co_codecap = co_codecap_stderrfd;
-    stderrfd.co_datacap = co_datacap_stderrfd;
-    numflag = params->numflag;
-    nflag = params->nflag;
-    qflag = params->qflag;
-    tflag = params->tflag;
-    fprintf_c(stderrfd, "in invoke(), initialized.\n");
+    if (op == GZSANDBOX_HELPER_OP_INIT)
+    {
+      __capability struct gz_init_params * params = vparams;
+      stderrfd.co_codecap = co_codecap_stderrfd;
+      stderrfd.co_datacap = co_datacap_stderrfd;
+      numflag = params->numflag;
+      nflag = params->nflag;
+      qflag = params->qflag;
+      tflag = params->tflag;
+      fprintf_c(stderrfd, "in invoke(), initialized.\n");
+      initialized = 1;
+    }
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
   {
+      fprintf_c(stderrfd, "in invoke(), params is %p.\n", (void*)vparams);
+    return 0;
     __capability struct gz_params * params = vparams;
     if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
       return gz_compress(
