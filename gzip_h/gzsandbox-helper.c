@@ -27,7 +27,11 @@ extern __capability void	*cheri_system_type;
 #define GZIP_MAGIC1	0x8B
 #define GZIP_OMAGIC1	0x9E
 
+#define HEAD_CRC	0x02
+#define EXTRA_FIELD	0x04
 #define ORIG_NAME	0x08
+#define COMMENT		0x10
+
 #define OS_CODE		3	/* Unix */
 
 static struct cheri_object stderrfd;
@@ -37,12 +41,16 @@ static const char * progname = "progname";
 
 /* TODO: copy these flags on sandbox init */
 static int	numflag = 6;		/* gzip -1..-9 value */
-static	int	qflag;			/* quiet mode */
 static	int	nflag;			/* don't save name/timestamp */
+static	int	qflag;			/* quiet mode */
+static	int	tflag;			/* test */
 static	int	exit_value = 0;		/* exit value */
 
 off_t
-gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime);
+gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t *gsizep, __capability const char *origname, uint32_t mtime);
+off_t
+gz_uncompress(struct cheri_object in, struct cheri_object out, __capability char *pre, size_t prelen, __capability off_t *gsizep,
+	      __capability const char *filename);
 
 static	void	maybe_err(const char *fmt, ...) __printflike(1, 2) __dead2;
 static	void	maybe_warn(const char *fmt, ...) __printflike(1, 2);
@@ -133,10 +141,13 @@ invoke(register_t op,
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
   {
     if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
-      return gz_compress(params->infd, params->outfd,
-        params->gsizep, params->origname, params->mtime);
+      return gz_compress(
+        params->infd, params->outfd, params->gsizep, params->origname,
+        params->mtime);
     else if (op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
-      ;
+      return gz_uncompress(
+        params->infd, params->outfd, params->pre, params->prelen,
+        params->gsizep, params->filename);
   }
   return 0;
 }
@@ -187,7 +198,7 @@ maybe_err(const char *fmt, ...)
 
 /* compress input to output. Return bytes read, -1 on error */
 off_t
-gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime)
+gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t *gsizep, __capability const char *origname, uint32_t mtime)
 {
 	z_stream z;
 	char *outbufp, *inbufp;
@@ -220,7 +231,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, cons
 #else
 	if (nflag != 0) {
 		mtime = 0;
-		origname = "";
+		origname = cheri_ptr((void*)"",1);
 	}
 
   /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
@@ -236,7 +247,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, cons
     outbufp[7] = (mtime >> 24) & 0xff;
     outbufp[8] = numflag == 1 ? 4 : numflag == 9 ? 2 : 0;
     outbufp[9] = OS_CODE;
-    i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", origname);
+    i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", (void*)origname);
   }
   else
   {
@@ -387,5 +398,355 @@ out:
 		*gsizep = out_tot;
 	return in_tot;
 }
+
+/*
+ * uncompress input to output then close the input.  return the
+ * uncompressed size written, and put the compressed sized read
+ * into `*gsizep'.
+ */
+off_t
+gz_uncompress(struct cheri_object in, struct cheri_object out, __capability char *pre, size_t prelen, __capability off_t *gsizep,
+	      __capability const char *filename)
+{
+	z_stream z;
+	char *outbufp, *inbufp;
+	off_t out_tot = -1, in_tot = 0;
+	uint32_t out_sub_tot = 0;
+	enum {
+		GZSTATE_MAGIC0,
+		GZSTATE_MAGIC1,
+		GZSTATE_METHOD,
+		GZSTATE_FLAGS,
+		GZSTATE_SKIPPING,
+		GZSTATE_EXTRA,
+		GZSTATE_EXTRA2,
+		GZSTATE_EXTRA3,
+		GZSTATE_ORIGNAME,
+		GZSTATE_COMMENT,
+		GZSTATE_HEAD_CRC1,
+		GZSTATE_HEAD_CRC2,
+		GZSTATE_INIT,
+		GZSTATE_READ,
+		GZSTATE_CRC,
+		GZSTATE_LEN,
+	} state = GZSTATE_MAGIC0;
+	int flags = 0, skip_count = 0;
+	int error = Z_STREAM_ERROR, done_reading = 0;
+	uLong crc = 0;
+	ssize_t wr;
+	int needmore = 0;
+
+#define ADVANCE()       { z.next_in++; z.avail_in--; }
+
+	if ((outbufp = malloc(BUFLEN)) == NULL) {
+		maybe_err("malloc failed");
+		goto out2;
+	}
+	if ((inbufp = malloc(BUFLEN)) == NULL) {
+		maybe_err("malloc failed");
+		goto out1;
+	}
+
+	memset(&z, 0, sizeof z);
+	z.avail_in = prelen;
+	z.next_in = (unsigned char *)pre;
+	z.avail_out = BUFLEN;
+	z.next_out = (unsigned char *)outbufp;
+	z.zalloc = NULL;
+	z.zfree = NULL;
+	z.opaque = 0;
+
+	in_tot = prelen;
+	out_tot = 0;
+
+	for (;;) {
+		if ((z.avail_in == 0 || needmore) && done_reading == 0) {
+			ssize_t in_size;
+
+			if (z.avail_in > 0) {
+				memmove(inbufp, z.next_in, z.avail_in);
+			}
+			z.next_in = (unsigned char *)inbufp;
+			in_size = read_c(in, z.next_in + z.avail_in,
+			    BUFLEN - z.avail_in);
+
+			if (in_size == -1) {
+				maybe_warn("failed to read stdin");
+				goto stop_and_fail;
+			} else if (in_size == 0) {
+				done_reading = 1;
+			}
+
+			z.avail_in += in_size;
+			needmore = 0;
+
+			in_tot += in_size;
+		}
+		if (z.avail_in == 0) {
+			if (done_reading && state != GZSTATE_MAGIC0) {
+				maybe_warnx("%s: unexpected end of file",
+					    (void*) filename);
+				goto stop_and_fail;
+			}
+			goto stop;
+		}
+		switch (state) {
+		case GZSTATE_MAGIC0:
+			if (*z.next_in != GZIP_MAGIC0) {
+				if (in_tot > 0) {
+					maybe_warnx("%s: trailing garbage "
+						    "ignored", (void*) filename);
+					goto stop;
+				}
+				maybe_warnx("input not gziped (MAGIC0)");
+				goto stop_and_fail;
+			}
+			ADVANCE();
+			state++;
+			out_sub_tot = 0;
+			crc = crc32(0L, Z_NULL, 0);
+			break;
+
+		case GZSTATE_MAGIC1:
+			if (*z.next_in != GZIP_MAGIC1 &&
+			    *z.next_in != GZIP_OMAGIC1) {
+				maybe_warnx("input not gziped (MAGIC1)");
+				goto stop_and_fail;
+			}
+			ADVANCE();
+			state++;
+			break;
+
+		case GZSTATE_METHOD:
+			if (*z.next_in != Z_DEFLATED) {
+				maybe_warnx("unknown compression method");
+				goto stop_and_fail;
+			}
+			ADVANCE();
+			state++;
+			break;
+
+		case GZSTATE_FLAGS:
+			flags = *z.next_in;
+			ADVANCE();
+			skip_count = 6;
+			state++;
+			break;
+
+		case GZSTATE_SKIPPING:
+			if (skip_count > 0) {
+				skip_count--;
+				ADVANCE();
+			} else
+				state++;
+			break;
+
+		case GZSTATE_EXTRA:
+			if ((flags & EXTRA_FIELD) == 0) {
+				state = GZSTATE_ORIGNAME;
+				break;
+			}
+			skip_count = *z.next_in;
+			ADVANCE();
+			state++;
+			break;
+
+		case GZSTATE_EXTRA2:
+			skip_count |= ((*z.next_in) << 8);
+			ADVANCE();
+			state++;
+			break;
+
+		case GZSTATE_EXTRA3:
+			if (skip_count > 0) {
+				skip_count--;
+				ADVANCE();
+			} else
+				state++;
+			break;
+
+		case GZSTATE_ORIGNAME:
+			if ((flags & ORIG_NAME) == 0) {
+				state++;
+				break;
+			}
+			if (*z.next_in == 0)
+				state++;
+			ADVANCE();
+			break;
+
+		case GZSTATE_COMMENT:
+			if ((flags & COMMENT) == 0) {
+				state++;
+				break;
+			}
+			if (*z.next_in == 0)
+				state++;
+			ADVANCE();
+			break;
+
+		case GZSTATE_HEAD_CRC1:
+			if (flags & HEAD_CRC)
+				skip_count = 2;
+			else
+				skip_count = 0;
+			state++;
+			break;
+
+		case GZSTATE_HEAD_CRC2:
+			if (skip_count > 0) {
+				skip_count--;
+				ADVANCE();
+			} else
+				state++;
+			break;
+
+		case GZSTATE_INIT:
+			if (inflateInit2(&z, -MAX_WBITS) != Z_OK) {
+				maybe_warnx("failed to inflateInit");
+				goto stop_and_fail;
+			}
+			state++;
+			break;
+
+		case GZSTATE_READ:
+			error = inflate(&z, Z_FINISH);
+			switch (error) {
+			/* Z_BUF_ERROR goes with Z_FINISH... */
+			case Z_BUF_ERROR:
+				if (z.avail_out > 0 && !done_reading)
+					continue;
+
+			case Z_STREAM_END:
+			case Z_OK:
+				break;
+
+			case Z_NEED_DICT:
+				maybe_warnx("Z_NEED_DICT error");
+				goto stop_and_fail;
+			case Z_DATA_ERROR:
+				maybe_warnx("data stream error");
+				goto stop_and_fail;
+			case Z_STREAM_ERROR:
+				maybe_warnx("internal stream error");
+				goto stop_and_fail;
+			case Z_MEM_ERROR:
+				maybe_warnx("memory allocation error");
+				goto stop_and_fail;
+
+			default:
+				maybe_warn("unknown error from inflate(): %d",
+				    error);
+			}
+			wr = BUFLEN - z.avail_out;
+
+			if (wr != 0) {
+				crc = crc32(crc, (const Bytef *)outbufp, (unsigned)wr);
+				if (
+#ifndef SMALL
+				    /* don't write anything with -t */
+				    tflag == 0 &&
+#endif
+				    write_c(out, outbufp, wr) != wr) {
+					maybe_warn("error writing to output");
+					goto stop_and_fail;
+				}
+
+				out_tot += wr;
+				out_sub_tot += wr;
+			}
+
+			if (error == Z_STREAM_END) {
+				inflateEnd(&z);
+				state++;
+			}
+
+			z.next_out = (unsigned char *)outbufp;
+			z.avail_out = BUFLEN;
+
+			break;
+		case GZSTATE_CRC:
+			{
+				uLong origcrc;
+
+				if (z.avail_in < 4) {
+					if (!done_reading) {
+						needmore = 1;
+						continue;
+					}
+					maybe_warnx("truncated input");
+					goto stop_and_fail;
+				}
+				origcrc = ((unsigned)z.next_in[0] & 0xff) |
+					((unsigned)z.next_in[1] & 0xff) << 8 |
+					((unsigned)z.next_in[2] & 0xff) << 16 |
+					((unsigned)z.next_in[3] & 0xff) << 24;
+				if (origcrc != crc) {
+					maybe_warnx("invalid compressed"
+					     " data--crc error");
+					goto stop_and_fail;
+				}
+			}
+
+			z.avail_in -= 4;
+			z.next_in += 4;
+
+			if (!z.avail_in && done_reading) {
+				goto stop;
+			}
+			state++;
+			break;
+		case GZSTATE_LEN:
+			{
+				uLong origlen;
+
+				if (z.avail_in < 4) {
+					if (!done_reading) {
+						needmore = 1;
+						continue;
+					}
+					maybe_warnx("truncated input");
+					goto stop_and_fail;
+				}
+				origlen = ((unsigned)z.next_in[0] & 0xff) |
+					((unsigned)z.next_in[1] & 0xff) << 8 |
+					((unsigned)z.next_in[2] & 0xff) << 16 |
+					((unsigned)z.next_in[3] & 0xff) << 24;
+
+				if (origlen != out_sub_tot) {
+					maybe_warnx("invalid compressed"
+					     " data--length error");
+					goto stop_and_fail;
+				}
+			}
+				
+			z.avail_in -= 4;
+			z.next_in += 4;
+
+			if (error < 0) {
+				maybe_warnx("decompression error");
+				goto stop_and_fail;
+			}
+			state = GZSTATE_MAGIC0;
+			break;
+		}
+		continue;
+stop_and_fail:
+		out_tot = -1;
+stop:
+		break;
+	}
+	if (state > GZSTATE_INIT)
+		inflateEnd(&z);
+
+	free(inbufp);
+out1:
+	free(outbufp);
+out2:
+	if (gsizep)
+		*gsizep = in_tot;
+	return (out_tot);
+}
+
 
 

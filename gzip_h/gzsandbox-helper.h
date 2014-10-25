@@ -11,9 +11,17 @@ struct gz_params
 {
   struct cheri_object infd;
   struct cheri_object outfd;
-  off_t * gsizep;
-  const char * origname;
+
+  __capability off_t * gsizep;
+
+  /* gz_compress params */
+  __capability const char * origname;
   uint32_t mtime;
+
+  /* gz_uncompress params */
+  __capability char * pre;
+  size_t prelen;
+  __capability const char * filename;
 };
 
 #endif /* !_GZSANDBOX_HELPER_H_ */
