@@ -24,4 +24,12 @@ struct gz_params
   __capability const char * filename;
 };
 
+struct gz_init_params
+{
+  int numflag;
+  int nflag;
+  int qflag;
+  int tflag;
+};
+
 #endif /* !_GZSANDBOX_HELPER_H_ */

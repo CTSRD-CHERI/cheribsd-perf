@@ -129,17 +129,22 @@ invoke(register_t op,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams)
 {
-  __capability struct gz_params * params = vparams;
   /* reconstruct the cheri_objects */
   if (op == GZSANDBOX_HELPER_OP_INIT)
   {
+    __capability struct gz_init_params * params = vparams;
     stderrfd.co_codecap = co_codecap_stderrfd;
     stderrfd.co_datacap = co_datacap_stderrfd;
+    numflag = params->numflag;
+    nflag = params->nflag;
+    qflag = params->qflag;
+    tflag = params->tflag;
     fprintf_c(stderrfd, "in invoke(), initialized.\n");
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
   {
+    __capability struct gz_params * params = vparams;
     if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
       return gz_compress(
         params->infd, params->outfd, params->gsizep, params->origname,

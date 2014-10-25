@@ -20,10 +20,6 @@ static int			 gzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
 
-void
-gzsandbox_test(int infd_fileno, int outfd_fileno);
-static void
-gzsandbox_initialize(void);
 #include "gzsandbox-helper.h"
 #include <machine/cheri.h>
 #include <machine/cheric.h>
@@ -33,7 +29,13 @@ gzsandbox_initialize(void);
 #define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
 
 void
-gzsandbox_test(int infd_fileno, int outfd_fileno)
+gzsandbox_test(int infd_fileno, int outfd_fileno, struct gz_init_params params);
+
+static void
+gzsandbox_initialize(void);
+
+void
+gzsandbox_test(int infd_fileno, int outfd_fileno, struct gz_init_params params)
 {
   register_t v;
   struct cheri_object infd, outfd, stderrfd;
@@ -50,12 +52,12 @@ gzsandbox_test(int infd_fileno, int outfd_fileno)
   
   if (cheri_fd_new(outfd_fileno, &outfd) < 0)
     err(-1, "cheri_fd_new: outfd_fileno");
-  
+
   printf("invoking...\n");
   v = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
             0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
-            cheri_zerocap(), cheri_zerocap(),
+            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
   printf("invoked.\n");
