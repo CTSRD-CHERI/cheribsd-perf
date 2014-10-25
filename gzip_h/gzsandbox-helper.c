@@ -86,14 +86,14 @@ ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
   return rc.cfr_retval0;
 }
 
-#define printf_c(...) \
+
+/*#define printf_c(...) \
   do { \
     char buf[512]; \
     sprintf(buf, __VA_ARGS__); \
     write_c(stderrfd, buf, strlen(buf)+1); \
   } while (0)
-
-#if 0
+*/
 int printf_c (const char * restrict format, ...); /* XXX: write_c()s to stderrfd */
 int printf_c (const char * restrict format, ...)
 {
@@ -101,15 +101,12 @@ int printf_c (const char * restrict format, ...)
   va_list vl;
   int n;
   va_start(vl, format);
-  write_c(stderrfd, "test\n", 6);
   n = vsnprintf(buf, sizeof buf, format, vl);
   va_end(vl);
   if (n < 0) return n;
   n++;
-  write_c(stderrfd, "test\n", 6);
   return write_c(stderrfd, buf, n);
 }
-#endif /* 0 */
 
 int
 invoke(register_t op,
@@ -123,12 +120,7 @@ invoke(register_t op,
   {
     stderrfd.co_codecap = co_codecap_stderrfd;
     stderrfd.co_datacap = co_datacap_stderrfd;
-    write_c(stderrfd, "hello\n", 6);
     printf_c("in invoke(), initialized.\n");
-    char tmpbuf[512];
-    //sprintf(tmpbuf, "hello...\n");
-    strcpy(tmpbuf, "hello...\n");
-    write_c(stderrfd, tmpbuf, 10);
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)

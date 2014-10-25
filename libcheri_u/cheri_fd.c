@@ -266,7 +266,6 @@ _cheri_fd_write_c(__capability const void *buf_c)
 		return (ret);
 	}
 	buf = (void *)buf_c;
-  printf("_cheri_fd_write_c: buf: %s\n", buf);
 
 	/* Check that cheri_fd hasn't been revoked. */
 	cfp = cheri_getidc();
@@ -300,8 +299,6 @@ cheri_fd_enter(register_t methodnum, register_t a1, register_t a2,
     struct cheri_object co __unused, __capability void *c3)
 {
 	struct cheri_fd_ret ret;
-
-  printf("cheri_fd_enter: methodnum = %d\n", methodnum);
 
 	switch (methodnum) {
 	case CHERI_FD_METHOD_FSTAT_C:

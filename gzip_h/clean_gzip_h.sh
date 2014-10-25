@@ -1,3 +1,6 @@
+pushd ../libc_cheri_u && \
+make -f Makefile.CHERI clean && \
+popd && \
 pushd ../libcheri_u && \
 make -f Makefile.CHERI clean && \
 popd && \
