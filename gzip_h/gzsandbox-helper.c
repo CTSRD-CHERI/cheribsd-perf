@@ -32,10 +32,21 @@ extern __capability void	*cheri_system_type;
 
 static struct cheri_object stderrfd;
 
-/* TODO: copy this flag on sandbox init */
-static	int	nflag;			/* don't save name/timestamp */
-/* TODO: copy this flag on sandbox init */
+/* TODO: set this on sandbox init */
+static const char * progname = "progname";
+
+/* TODO: copy these flags on sandbox init */
 static int	numflag = 6;		/* gzip -1..-9 value */
+static	int	qflag;			/* quiet mode */
+static	int	nflag;			/* don't save name/timestamp */
+static	int	exit_value = 0;		/* exit value */
+
+off_t
+gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime);
+
+static	void	maybe_err(const char *fmt, ...) __printflike(1, 2) __dead2;
+static	void	maybe_warn(const char *fmt, ...) __printflike(1, 2);
+static	void	maybe_warnx(const char *fmt, ...) __printflike(1, 2);
 
 int
 invoke(register_t op,
@@ -43,32 +54,12 @@ invoke(register_t op,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams);
 
-off_t
-gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, const char *origname, uint32_t mtime);
-
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
-
-/* TODO: implement this */
-static	void	maybe_err(const char *fmt, ...) __printflike(1, 2) __dead2;
-static	void	maybe_warn(const char *fmt, ...) __printflike(1, 2);
-static	void	maybe_warnx(const char *fmt, ...) __printflike(1, 2);
-void
-maybe_err(const char *fmt, ...)
-{
-  write_c(stderrfd, fmt, strlen(fmt)+1);
-  exit(2);
-}
-void
-maybe_warn(const char *fmt, ...)
-{
-  write_c(stderrfd, fmt, strlen(fmt)+1);
-}
-void
-maybe_warnx(const char *fmt, ...)
-{
-  write_c(stderrfd, fmt, strlen(fmt)+1);
-}
+int fprintf_c (struct cheri_object fd, const char * restrict format, ...);
+int vfprintf_c (struct cheri_object fd, const char * restrict format, va_list ap);
+void vwarn (const char * restrict format, va_list ap);
+void vwarnx (const char * restrict format, va_list ap);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
@@ -86,26 +77,42 @@ ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
   return rc.cfr_retval0;
 }
 
-
-/*#define printf_c(...) \
-  do { \
-    char buf[512]; \
-    sprintf(buf, __VA_ARGS__); \
-    write_c(stderrfd, buf, strlen(buf)+1); \
-  } while (0)
-*/
-int printf_c (const char * restrict format, ...); /* XXX: write_c()s to stderrfd */
-int printf_c (const char * restrict format, ...)
+int fprintf_c (struct cheri_object fd, const char * restrict format, ...)
+{
+  int rc;
+  va_list ap;
+  va_start(ap, format);
+  rc = vfprintf_c(fd, format, ap);
+  va_end(ap);
+  return rc;
+}
+int vfprintf_c (struct cheri_object fd, const char * restrict format, va_list ap)
 {
   char buf[512];
-  va_list vl;
   int n;
-  va_start(vl, format);
-  n = vsnprintf(buf, sizeof buf, format, vl);
-  va_end(vl);
+  n = vsnprintf(buf, sizeof buf, format, ap);
   if (n < 0) return n;
   n++;
-  return write_c(stderrfd, buf, n);
+  return write_c(fd, buf, n);
+}
+void vwarn (const char * restrict format, va_list ap)
+{
+  fprintf_c(stderrfd, "%s: ", progname);
+  if (format)
+  {
+    vfprintf_c(stderrfd, format, ap);
+    fprintf_c(stderrfd, ": %s", strerror(errno));
+  }
+  fprintf_c(stderrfd, "\n");
+}
+void vwarnx (const char * restrict format, va_list ap)
+{
+  fprintf_c(stderrfd, "%s: ", progname);
+  if (format)
+  {
+    vfprintf_c(stderrfd, format, ap);
+  }
+  fprintf_c(stderrfd, "\n");
 }
 
 int
@@ -120,7 +127,7 @@ invoke(register_t op,
   {
     stderrfd.co_codecap = co_codecap_stderrfd;
     stderrfd.co_datacap = co_datacap_stderrfd;
-    printf_c("in invoke(), initialized.\n");
+    fprintf_c(stderrfd, "in invoke(), initialized.\n");
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
@@ -132,6 +139,50 @@ invoke(register_t op,
       ;
   }
   return 0;
+}
+
+/* maybe print a warning */
+void
+maybe_warn(const char *fmt, ...)
+{
+	va_list ap;
+
+	if (qflag == 0) {
+		va_start(ap, fmt);
+		vwarn(fmt, ap);
+		va_end(ap);
+	}
+	if (exit_value == 0)
+		exit_value = 1;
+}
+
+/* ... without an errno. */
+void
+maybe_warnx(const char *fmt, ...)
+{
+	va_list ap;
+
+	if (qflag == 0) {
+		va_start(ap, fmt);
+		vwarnx(fmt, ap);
+		va_end(ap);
+	}
+	if (exit_value == 0)
+		exit_value = 1;
+}
+
+/* maybe print an error */
+void
+maybe_err(const char *fmt, ...)
+{
+	va_list ap;
+
+	if (qflag == 0) {
+		va_start(ap, fmt);
+		vwarn(fmt, ap);
+		va_end(ap);
+	}
+	exit(2);
 }
 
 /* compress input to output. Return bytes read, -1 on error */
@@ -152,7 +203,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, off_t *gsizep, cons
 
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
-  printf_c("inbufp: %p\n", inbufp);
+  fprintf_c(stderrfd, "inbufp: %p\n", inbufp);
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
