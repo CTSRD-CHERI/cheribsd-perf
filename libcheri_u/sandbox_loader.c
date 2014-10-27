@@ -158,6 +158,7 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	 */
 	sbop->sbo_heapbase = (register_t)base - (register_t)sbop->sbo_mem;
 	sbop->sbo_heaplen = length - (GUARD_PAGE_SIZE + STACK_SIZE);
+  printf("sbo_heapbase: %p\n", sbop->sbo_heapbase);
 	if (mmap(base, sbop->sbo_heaplen, PROT_READ | PROT_WRITE,
 	    MAP_ANON | MAP_FIXED, -1, 0) == MAP_FAILED) {
 		saved_errno = errno;

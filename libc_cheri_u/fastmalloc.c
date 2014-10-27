@@ -56,8 +56,9 @@ malloc(size_t size)
 
 	if (_sb_heapcap == NULL) {
 		_sb_heapcap = cheri_setlen(
-		    cheri_incbase(__builtin_cheri_get_global_data_cap(),
-		    _sb_heapbase), _sb_heaplen);
+        /* XXX: disabled because returning non-c0 relative caps otherwise */
+		    /*cheri_incbase(__builtin_cheri_get_global_data_cap(),*/
+		    _sb_heapbase/*)*/, _sb_heaplen);
 #ifdef MALLOC_DEBUG
 		printf("%s: _sb_heapcap base 0x%jx offset 0x%jx length 0x%zx\n",
 		    __func__, cheri_getbase(_sb_heapcap),
@@ -88,7 +89,9 @@ malloc(size_t size)
 	    cheri_getbase(ptr), cheri_getoffset(ptr), cheri_getlen(ptr));
 #endif
 
-	return((void*)cheri_getbase(ptr));
+  /* XXX: now uses CToPtr, because c0 might not be 0! */
+	/*return((void*)cheri_getbase(ptr));*/
+  return (void*)ptr;
 }
 
 void

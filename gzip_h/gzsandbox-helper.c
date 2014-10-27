@@ -68,6 +68,8 @@ int fprintf_c (struct cheri_object fd, const char * restrict format, ...);
 int vfprintf_c (struct cheri_object fd, const char * restrict format, va_list ap);
 void vwarn (const char * restrict format, va_list ap);
 void vwarnx (const char * restrict format, va_list ap);
+__capability void * malloc_c (size_t size);
+void free_c (__capability void * ptr);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
@@ -123,6 +125,19 @@ void vwarnx (const char * restrict format, va_list ap)
   fprintf_c(stderrfd, "\n");
 }
 
+__capability void * malloc_c (size_t size)
+{
+  void * ptr;
+  ptr = malloc(size);
+  if (!ptr) return NULL;
+  return cheri_ptr(ptr, size);
+}
+
+void free_c (__capability void * ptr)
+{
+  free((void*)ptr);
+}
+
 int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,
@@ -157,7 +172,6 @@ invoke(register_t op,
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
   {
       fprintf_c(stderrfd, "in invoke(), params is %p.\n", (void*)vparams);
-    return 0;
     __capability struct gz_params * params = vparams;
     if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
       return gz_compress(
@@ -220,7 +234,7 @@ off_t
 gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t *gsizep, __capability const char *origname, uint32_t mtime)
 {
 	z_stream z;
-	char *outbufp, *inbufp;
+	__capability char *outbufp, *inbufp;
 	off_t in_tot = 0, out_tot = 0;
 	ssize_t in_size;
 	int i, error;
@@ -230,16 +244,30 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 				 0, 0, 0, 0,
 				 0, OS_CODE };
 #endif
+  fprintf_c(stderrfd, "malloc(10): %p\n", malloc(10));
+  return 0;
 
-	outbufp = malloc(BUFLEN);
-	inbufp = malloc(BUFLEN);
-  fprintf_c(stderrfd, "inbufp: %p\n", inbufp);
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+  char * tmp = malloc(BUFLEN);
+  char * hpstart = (char*)0x160c00000;
+  __ptrdiff_t tmpdiff = tmp-hpstart;
+  outbufp = cheri_ptr((void*)tmpdiff, BUFLEN);
+	//outbufp = malloc_c(BUFLEN);
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
+	inbufp = malloc_c(BUFLEN);
+  /*fprintf_c(stderrfd, "inbufp: %p, outbufp: %p (note: &malloc: %p, &invoke: %p)\n", inbufp, outbufp, &malloc, &invoke);*/
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
 	}
 
+  fprintf_c(stderrfd, "memset\n");
 	memset(&z, 0, sizeof z);
+  fprintf_c(stderrfd, "memset done\n");
 	z.zalloc = Z_NULL;
 	z.zfree = Z_NULL;
 	z.opaque = 0;
@@ -252,11 +280,14 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 		mtime = 0;
 		origname = cheri_ptr((void*)"",1);
 	}
+  fprintf_c(stderrfd, "test: BUFLEN=%d\n", (int)BUFLEN);
 
   /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
   if (BUFLEN >= 10)
   {
+  fprintf_c(stderrfd, "set outbufp\n");
     outbufp[0] = GZIP_MAGIC0;
+  fprintf_c(stderrfd, "set outbufp again\n");
     outbufp[1] = GZIP_MAGIC1;
     outbufp[2] = Z_DEFLATED;
     outbufp[3] = *origname ? ORIG_NAME : 0;
@@ -266,12 +297,14 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
     outbufp[7] = (mtime >> 24) & 0xff;
     outbufp[8] = numflag == 1 ? 4 : numflag == 9 ? 2 : 0;
     outbufp[9] = OS_CODE;
-    i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", (void*)origname);
+    fprintf_c(stderrfd, "doing an fprintf_c\n");
+    i = 10+snprintf((void*)&outbufp[10], BUFLEN-10, "%s", (void*)origname);
   }
   else
   {
     i = 0;
   }
+  fprintf_c(stderrfd, "i: %d\n", (int) i);
 
 	/*i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c%c%c%s", 
 		     GZIP_MAGIC0, GZIP_MAGIC1, Z_DEFLATED,
@@ -295,6 +328,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 
 	error = deflateInit2(&z, numflag, Z_DEFLATED,
 			     (-MAX_WBITS), 8, Z_DEFAULT_STRATEGY);
+  fprintf_c(stderrfd, "error: %d\n", (int) error);
 	if (error != Z_OK) {
 		maybe_warnx("deflateInit2 failed");
 		in_tot = -1;
@@ -304,7 +338,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 	crc = crc32(0L, Z_NULL, 0);
 	for (;;) {
 		if (z.avail_out == 0) {
-			if (write_c(out, outbufp, BUFLEN) != BUFLEN) {
+			if (write_c(out, (void*)outbufp, BUFLEN) != BUFLEN) {
 				maybe_warn("write");
 				out_tot = -1;
 				goto out;
@@ -316,7 +350,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 		}
 
 		if (z.avail_in == 0) {
-			in_size = read_c(in, inbufp, BUFLEN);
+			in_size = read_c(in, (void*)inbufp, BUFLEN);
 			if (in_size < 0) {
 				maybe_warn("read");
 				in_tot = -1;
@@ -353,7 +387,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 
 		len = (char *)z.next_out - outbufp;
 
-		w = write_c(out, outbufp, len);
+		w = write_c(out, (void*)outbufp, len);
 		if (w == -1 || (size_t)w != len) {
 			maybe_warn("write");
 			out_tot = -1;
@@ -402,7 +436,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 		 (int)(in_tot >> 24) & 0xff);*/
 	if (i != 8)
 		maybe_err("snprintf");
-	if (write_c(out, outbufp, i) != i) {
+	if (write_c(out, (void*)outbufp, i) != i) {
 		maybe_warn("write");
 		in_tot = -1;
 	} else
@@ -410,9 +444,9 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 
 out:
 	if (inbufp != NULL)
-		free(inbufp);
+		free_c(inbufp);
 	if (outbufp != NULL)
-		free(outbufp);
+		free_c(outbufp);
 	if (gsizep)
 		*gsizep = out_tot;
 	return in_tot;
