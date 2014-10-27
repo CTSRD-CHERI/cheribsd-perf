@@ -83,11 +83,11 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 struct internal_state;
 
 typedef struct z_stream_s {
-    __capability z_const Bytef *next_in;     /* next input byte */
+    z_const Bytef *next_in;     /* next input byte */
     uInt     avail_in;  /* number of bytes available at next_in */
     uLong    total_in;  /* total number of input bytes read so far */
 
-    __capability Bytef    *next_out; /* next output byte should be put there */
+    Bytef    *next_out; /* next output byte should be put there */
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 
@@ -103,7 +103,7 @@ typedef struct z_stream_s {
     uLong   reserved;   /* reserved for future use */
 } z_stream;
 
-typedef __capability z_stream FAR *z_streamp;
+typedef z_stream FAR *z_streamp;
 
 /*
      gzip header information passed to and from zlib routines.  See RFC 1952

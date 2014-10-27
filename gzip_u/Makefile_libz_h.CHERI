@@ -38,6 +38,5 @@ LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 
 push:
 		$(CHERI_PUSH) gzip gzip_u
-		
 
 #		scp gzip $(CHERI_SSH_HOST):~/gzip_u

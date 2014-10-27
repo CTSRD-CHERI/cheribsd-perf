@@ -1,0 +1,119 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <machine/cheri.h>
+#include <machine/cheric.h>
+
+#include <cheri/cheri_enter.h>
+#include <cheri/cheri_fd.h>
+#include <cheri/cheri_invoke.h>
+extern __capability void	*cheri_system_type;
+#include <cheri/cheri_system.h>
+
+/* libc_cheri provides implementation */
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "lzsandbox-helper.h"
+
+static struct cheri_object stderrfd;
+
+int
+invoke(register_t op,
+  __capability void * co_codecap_stderrfd,
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams);
+
+ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
+ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
+int fprintf_c (struct cheri_object fd, const char * restrict format, ...);
+int vfprintf_c (struct cheri_object fd, const char * restrict format, va_list ap);
+__capability void * malloc_c (size_t size);
+void free_c (__capability void * ptr);
+size_t strlen_c (__capability const char * str);
+
+ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
+{
+  struct cheri_fd_ret rc;
+  rc = cheri_fd_read_c(fd, cheri_ptrperm(buf, nbytes, CHERI_PERM_STORE));
+  errno = rc.cfr_retval1;
+  return rc.cfr_retval0;
+}
+
+ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
+{
+  struct cheri_fd_ret rc;
+  rc = cheri_fd_write_c(fd, cheri_ptrperm((void*)buf, nbytes, CHERI_PERM_LOAD));
+  errno = rc.cfr_retval1;
+  return rc.cfr_retval0;
+}
+
+int fprintf_c (struct cheri_object fd, const char * restrict format, ...)
+{
+  int rc;
+  va_list ap;
+  va_start(ap, format);
+  rc = vfprintf_c(fd, format, ap);
+  va_end(ap);
+  return rc;
+}
+int vfprintf_c (struct cheri_object fd, const char * restrict format, va_list ap)
+{
+  char buf[512];
+  int n;
+  n = vsnprintf(buf, sizeof buf, format, ap);
+  if (n < 0) return n;
+  n++;
+  return write_c(fd, buf, n);
+}
+__capability void * malloc_c (size_t size)
+{
+  void * ptr;
+  ptr = malloc(size);
+  if (!ptr) return NULL;
+  return cheri_ptr(ptr, size);
+}
+
+void free_c (__capability void * ptr)
+{
+  free((void*)ptr);
+}
+
+size_t strlen_c (__capability const char * str)
+{
+  size_t len = 0;
+  while (*str)
+    str++, len++;
+  return len;
+}
+
+int
+invoke(register_t op,
+  __capability void * co_codecap_stderrfd,
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams)
+{
+  __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Winline-asm"
+  __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
+#pragma clang diagnostic pop
+  static int initialized = 0;
+  if (initialized)
+    fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
+  /* reconstruct the cheri_objects */
+  if (!initialized)
+  {
+    if (op == LZSANDBOX_HELPER_OP_INIT)
+    {
+      stderrfd.co_codecap = co_codecap_stderrfd;
+      stderrfd.co_datacap = co_datacap_stderrfd;
+      fprintf_c(stderrfd, "in invoke(), initialized.\n");
+      initialized = 1;
+    }
+  }
+  return 0;
+}
