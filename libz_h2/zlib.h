@@ -31,6 +31,8 @@
 #ifndef ZLIB_H
 #define ZLIB_H
 
+#include <machine/cheri.h>
+#include <cheri/sandbox.h>
 #include "zconf.h"
 
 #ifdef __cplusplus
@@ -82,12 +84,35 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 
 struct internal_state;
 
+#if !defined(ZLIB_INCL_SANDBOX) && \
+    !defined(ZLIB_INCL_WRAPPER)
+#define ZLIB_INCL_APP
+#endif /* !ZLIB_INCL_SANDBOX && !ZLIB_INCL_WRAPPER */
+
 typedef struct z_stream_s {
+#if defined(ZLIB_INCL_APP)
     z_const Bytef *next_in;     /* next input byte */
+    __capability z_const Bytef *padding1;
+#elif defined(ZLIB_INCL_SANDBOX)
+    z_const Bytef *padding1;
+    __capability z_const Bytef *next_in;
+#elif defined(ZLIB_INCL_WRAPPER)
+    z_const Bytef *next_in_p;
+    __capability z_const Bytef *next_in_c;
+#endif
     uInt     avail_in;  /* number of bytes available at next_in */
     uLong    total_in;  /* total number of input bytes read so far */
 
+#if defined(ZLIB_INCL_APP)
     Bytef    *next_out; /* next output byte should be put there */
+    __capability Bytef *padding2;
+#elif defined(ZLIB_INCL_SANDBOX)
+    Bytef *padding2;
+    __capability Bytef *next_out;
+#elif defined(ZLIB_INCL_WRAPPER)
+    Bytef *next_out_p;
+    __capability Bytef *next_out_c;
+#endif
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 
@@ -101,6 +126,7 @@ typedef struct z_stream_s {
     int     data_type;  /* best guess about the data type: binary or text */
     uLong   adler;      /* adler32 value of the uncompressed data */
     uLong   reserved;   /* reserved for future use */
+    struct sandbox_object * sbop;
 } z_stream;
 
 typedef z_stream FAR *z_streamp;

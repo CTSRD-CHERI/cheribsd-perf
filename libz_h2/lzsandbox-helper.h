@@ -1,11 +1,15 @@
 #ifndef _LZSANDBOX_HELPER_H_
 #define _LZSANDBOX_HELPER_H_
 
-#define LZSANDBOX_HELPER_OP_INIT            0
-#define LZSANDBOX_HELPER_OP_DEFLATE_INIT    1
-#define LZSANDBOX_HELPER_OP_DEFLATE         2
+/* include zlib.h before including this file, with the appropriate ZLIB_INCL_ defined */
+
+#define LZOP_DEFLATE 0
 
 #include <machine/cheri.h>
 #include <machine/cheric.h>
+
+struct lzparams
+{
+};
 
 #endif /* !_LZSANDBOX_HELPER_H_ */

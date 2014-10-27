@@ -6,7 +6,7 @@ LDADD=  ../libc_cheri_u/libc_cheri.a libz.a
 FILES=lzsandbox-helper.bin
 CLEANFILES=lzsandbox-helper.bin
 
-all: lzsandbox-helper.bin libzwrapper.a
+all: lzsandbox-helper.bin
 
 lzsandbox-helper: lzsandbox-helper.o
 	$(CC) $(LDFLAGS) -o ${.TARGET} ${.ALLSRC} $(LDADD)

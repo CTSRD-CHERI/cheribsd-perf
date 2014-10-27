@@ -17,6 +17,8 @@ extern __capability void	*cheri_system_type;
 #include <stdlib.h>
 #include <string.h>
 
+#define ZLIB_INCL_SANDBOX
+#include "zlib.h"
 #include "lzsandbox-helper.h"
 
 static struct cheri_object stderrfd;
@@ -107,7 +109,7 @@ invoke(register_t op,
   /* reconstruct the cheri_objects */
   if (!initialized)
   {
-    if (op == LZSANDBOX_HELPER_OP_INIT)
+    if (op == LZOP_DEFLATE)
     {
       stderrfd.co_codecap = co_codecap_stderrfd;
       stderrfd.co_datacap = co_datacap_stderrfd;

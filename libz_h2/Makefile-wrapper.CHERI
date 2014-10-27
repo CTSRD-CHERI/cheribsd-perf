@@ -2,5 +2,6 @@
 LIB=zwrapper
 USE_CHERI=yes
 SRCS+=zwrapper.c
+LDADD+=../libcheri_u/libcheri.a
 .include <bsd.lib.mk>
 
