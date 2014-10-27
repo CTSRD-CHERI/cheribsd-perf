@@ -41,6 +41,6 @@ LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 .include <bsd.prog.mk>
 
 push:
-		/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8889 gzip gzip_h
+		$(CHERI_PUSH) gzip gzip_h
 
 		#scp gzip $(CHERI_SSH_HOST):~/gzip_h

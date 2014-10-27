@@ -70,6 +70,7 @@ void vwarn (const char * restrict format, va_list ap);
 void vwarnx (const char * restrict format, va_list ap);
 __capability void * malloc_c (size_t size);
 void free_c (__capability void * ptr);
+size_t strlen_c (__capability const char * str);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
@@ -136,6 +137,14 @@ __capability void * malloc_c (size_t size)
 void free_c (__capability void * ptr)
 {
   free((void*)ptr);
+}
+
+size_t strlen_c (__capability const char * str)
+{
+  size_t len = 0;
+  while (*str)
+    str++, len++;
+  return len;
 }
 
 int
@@ -234,7 +243,7 @@ off_t
 gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t *gsizep, __capability const char *origname, uint32_t mtime)
 {
 	z_stream z;
-	__capability char *outbufp, *inbufp;
+	char *outbufp, *inbufp;
 	off_t in_tot = 0, out_tot = 0;
 	ssize_t in_size;
 	int i, error;
@@ -244,22 +253,9 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 				 0, 0, 0, 0,
 				 0, OS_CODE };
 #endif
-  fprintf_c(stderrfd, "malloc(10): %p\n", malloc(10));
-  return 0;
-
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-  char * tmp = malloc(BUFLEN);
-  char * hpstart = (char*)0x160c00000;
-  __ptrdiff_t tmpdiff = tmp-hpstart;
-  outbufp = cheri_ptr((void*)tmpdiff, BUFLEN);
-	//outbufp = malloc_c(BUFLEN);
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-    __asm__ __volatile__ ("add $3, $3, $0" ::: "memory");
-	inbufp = malloc_c(BUFLEN);
-  /*fprintf_c(stderrfd, "inbufp: %p, outbufp: %p (note: &malloc: %p, &invoke: %p)\n", inbufp, outbufp, &malloc, &invoke);*/
+	outbufp = malloc(BUFLEN);
+	inbufp = malloc(BUFLEN);
+  fprintf_c(stderrfd, "inbufp: %p, outbufp: %p (note: &malloc: %p, &invoke: %p)\n", inbufp, outbufp, &malloc, &invoke);
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
@@ -277,10 +273,15 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 	i = sizeof header;
 #else
 	if (nflag != 0) {
+    fprintf_c(stderrfd, "nflag is non-zero\n");
+    const char * noname = "";
 		mtime = 0;
-		origname = cheri_ptr((void*)"",1);
+		origname = cheri_ptrperm((void*)noname, 1, CHERI_PERM_LOAD);
 	}
+  char c = *origname;
+  fprintf_c(stderrfd, "c: %c\n", c);
   fprintf_c(stderrfd, "test: BUFLEN=%d\n", (int)BUFLEN);
+  fprintf_c(stderrfd, "origname: b=%lx, o=%lx, l=%lu, ptr=%p\n", cheri_getbase((__capability void*)origname), cheri_getoffset((__capability void*)origname), cheri_getlen((__capability void*)origname), (void*)origname);
 
   /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
   if (BUFLEN >= 10)
@@ -298,7 +299,14 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
     outbufp[8] = numflag == 1 ? 4 : numflag == 9 ? 2 : 0;
     outbufp[9] = OS_CODE;
     fprintf_c(stderrfd, "doing an fprintf_c\n");
-    i = 10+snprintf((void*)&outbufp[10], BUFLEN-10, "%s", (void*)origname);
+    /* XXX: can't now convert origname into a pointer and use legacy MIPS load/store, because it's not within $c0 */
+    /*i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", (void*)origname);*/
+    size_t len = strlen_c(origname);
+    if (BUFLEN >= 10+len+1)
+    {
+      memcpy_c(cheri_ptrperm(&outbufp[10], BUFLEN-10, CHERI_PERM_STORE), origname, len+1);
+    }
+    i = 10+len;
   }
   else
   {
@@ -444,9 +452,9 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 
 out:
 	if (inbufp != NULL)
-		free_c(inbufp);
+		free(inbufp);
 	if (outbufp != NULL)
-		free_c(outbufp);
+		free(outbufp);
 	if (gsizep)
 		*gsizep = out_tot;
 	return in_tot;

@@ -1,4 +1,4 @@
-pushd ../libz_h && \
+pushd ../libz_h2 && \
 make -f Makefile.CHERI clean all && \
 popd && \
 make -f Makefile_libz_h.CHERI clean all && \

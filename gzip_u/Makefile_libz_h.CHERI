@@ -8,11 +8,11 @@
 PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 
-LDADD=		../libz_h/libz.a
-CFLAGS+= -I../libz_h/
+LDADD=		../libz_h2/libz.a
+CFLAGS+= -I../libz_h2/
 CFLAGS+= -g
 
-CFLAGS+=-DNO_XZ_SUPPORT -DLIBZ_MODIFIED_STRING=\"h\"
+CFLAGS+=-DNO_XZ_SUPPORT -DLIBZ_MODIFIED_STRING=\"h2\"
 
 MK_BZIP2_SUPPORT=no
 .if ${MK_BZIP2_SUPPORT} != "no"
@@ -37,4 +37,7 @@ LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 .include <bsd.prog.mk>
 
 push:
-		scp gzip $(CHERI_SSH_HOST):~/gzip_u
+		$(CHERI_PUSH) gzip gzip_u
+		
+
+#		scp gzip $(CHERI_SSH_HOST):~/gzip_u
