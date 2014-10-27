@@ -1,11 +1,12 @@
 #
-# $FreeBSD$
+# $FreeBSD: head/lib/libz/Makefile 232263 2012-02-28 18:30:18Z dim $
 #
 
-LIB=		z
+LIB=		z-cheri
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	6
-MAN=		zlib.3 zopen.3
+MAN=		zlib.3
+USE_CHERI=	yes
 
 #CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
 #CFLAGS=-g -DDEBUG
@@ -53,9 +54,10 @@ VERSION_DEF=	${.CURDIR}/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 CFLAGS+=	-DSYMBOL_VERSIONING
 
-INCS=		zconf.h zlib.h
+INCS=		zconf-cheri.h zlib-cheri.h
 
-.PATH:		${.CURDIR}/test
+.include <bsd.own.mk>
+CFLAGS+=	-DPOSTINC
 
 minigzip:	all minigzip.o
 	$(CC) -o minigzip minigzip.o -L. -lz
@@ -68,10 +70,7 @@ test: example minigzip
 	(export LD_LIBRARY_PATH=. ; \
 		echo hello world | ./minigzip | ./minigzip -d )
 
-beforeinstall:
-	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-		${.CURDIR}/zlib.pc ${DESTDIR}${LIBDATADIR}/pkgconfig
-
+.include <src.opts.mk>
 .include <bsd.lib.mk>
 
 ## XXX: clang integrated-as doesn't grok .intel_syntax directives yet

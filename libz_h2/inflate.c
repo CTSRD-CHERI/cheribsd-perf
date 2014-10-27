@@ -84,6 +84,7 @@
 #include "inftrees.h"
 #include "inflate.h"
 #include "inffast.h"
+#include <machine/cheric.h>
 
 #ifdef MAKEFIXED
 #  ifndef BUILDFIXED
@@ -93,12 +94,13 @@
 
 /* function prototypes */
 local void fixedtables OF((struct inflate_state FAR *state));
-local int updatewindow OF((z_streamp strm, const unsigned char FAR *end,
+local int updatewindow OF((z_streamp strm,
+			   __capability const unsigned char FAR *data,
                            unsigned copy));
 #ifdef BUILDFIXED
    void makefixed OF((void));
 #endif
-local unsigned syncsearch OF((unsigned FAR *have, const unsigned char FAR *buf,
+local unsigned syncsearch OF((unsigned FAR *have, __capability const unsigned char FAR *buf,
                               unsigned len));
 
 int ZEXPORT inflateResetKeep(strm)
@@ -376,9 +378,9 @@ void makefixed()
    output will fall in the output data, making match copies simpler and faster.
    The advantage may be dependent on the size of the processor's data caches.
  */
-local int updatewindow(strm, end, copy)
+local int updatewindow(strm, data, copy)
 z_streamp strm;
-const Bytef *end;
+__capability const Bytef *data;
 unsigned copy;
 {
     struct inflate_state FAR *state;
@@ -388,9 +390,9 @@ unsigned copy;
 
     /* if it hasn't been done already, allocate space for the window */
     if (state->window == Z_NULL) {
-        state->window = (unsigned char FAR *)
-                        ZALLOC(strm, 1U << state->wbits,
-                               sizeof(unsigned char));
+        state->window = cheri_ptr(ZALLOC(strm, 1U << state->wbits,
+                               sizeof(unsigned char)),
+			       (1U << state->wbits) * sizeof(unsigned char));
         if (state->window == Z_NULL) return 1;
     }
 
@@ -403,17 +405,17 @@ unsigned copy;
 
     /* copy state->wsize or less output bytes into the circular window */
     if (copy >= state->wsize) {
-        zmemcpy(state->window, end - state->wsize, state->wsize);
+        zmemcpy_c(state->window, data + (copy - state->wsize), state->wsize);
         state->wnext = 0;
         state->whave = state->wsize;
     }
     else {
         dist = state->wsize - state->wnext;
         if (dist > copy) dist = copy;
-        zmemcpy(state->window + state->wnext, end - copy, dist);
+        zmemcpy_c(state->window + state->wnext, data + (copy - dist), dist);
         copy -= dist;
         if (copy) {
-            zmemcpy(state->window, end - copy, copy);
+            zmemcpy_c(state->window, data, copy);
             state->wnext = copy;
             state->whave = state->wsize;
         }
@@ -431,9 +433,9 @@ unsigned copy;
 /* check function to use adler32() for zlib or crc32() for gzip */
 #ifdef GUNZIP
 #  define UPDATE(check, buf, len) \
-    (state->flags ? crc32(check, buf, len) : adler32(check, buf, len))
+    (state->flags ? crc32_c(check, buf, len) : adler32_c(check, buf, len))
 #else
-#  define UPDATE(check, buf, len) adler32(check, buf, len)
+#  define UPDATE(check, buf, len) adler32_c(check, buf, len)
 #endif
 
 /* check macros for header crc */
@@ -458,7 +460,7 @@ unsigned copy;
 /* Load registers with state in inflate() for speed */
 #define LOAD() \
     do { \
-        put = strm->next_out; \
+        sput = put = strm->next_out; \
         left = strm->avail_out; \
         next = strm->next_in; \
         have = strm->avail_in; \
@@ -607,14 +609,15 @@ z_streamp strm;
 int flush;
 {
     struct inflate_state FAR *state;
-    z_const unsigned char FAR *next;    /* next input */
-    unsigned char FAR *put;     /* next output */
+    __capability z_const unsigned char FAR *next;    /* next input */
+    __capability unsigned char FAR *put;     /* next output */
+    __capability unsigned char FAR *sput;     /* saved next output */
     unsigned have, left;        /* available input and output */
     unsigned long hold;         /* bit buffer */
     unsigned bits;              /* bits in bit buffer */
     unsigned in, out;           /* save starting available input and output */
     unsigned copy;              /* number of stored or match bytes to copy */
-    unsigned char FAR *from;    /* where to copy match bytes from */
+    __capability unsigned char FAR *from;    /* where to copy match bytes from */
     code here;                  /* current decoding table entry */
     code last;                  /* parent table entry */
     unsigned len;               /* length to copy for repeats, bits to drop */
@@ -738,12 +741,12 @@ int flush;
                     if (state->head != Z_NULL &&
                         state->head->extra != Z_NULL) {
                         len = state->head->extra_len - state->length;
-                        zmemcpy(state->head->extra + len, next,
+                        zmemcpy_c_fromcap(state->head->extra + len, next,
                                 len + copy > state->head->extra_max ?
                                 state->head->extra_max - len : copy);
                     }
                     if (state->flags & 0x0200)
-                        state->check = crc32(state->check, next, copy);
+                        state->check = crc32_c(state->check, next, copy);
                     have -= copy;
                     next += copy;
                     state->length -= copy;
@@ -764,7 +767,7 @@ int flush;
                         state->head->name[state->length++] = len;
                 } while (len && copy < have);
                 if (state->flags & 0x0200)
-                    state->check = crc32(state->check, next, copy);
+                    state->check = crc32_c(state->check, next, copy);
                 have -= copy;
                 next += copy;
                 if (len) goto inf_leave;
@@ -785,7 +788,7 @@ int flush;
                         state->head->comment[state->length++] = len;
                 } while (len && copy < have);
                 if (state->flags & 0x0200)
-                    state->check = crc32(state->check, next, copy);
+                    state->check = crc32_c(state->check, next, copy);
                 have -= copy;
                 next += copy;
                 if (len) goto inf_leave;
@@ -883,7 +886,7 @@ int flush;
                 if (copy > have) copy = have;
                 if (copy > left) copy = left;
                 if (copy == 0) goto inf_leave;
-                zmemcpy(put, next, copy);
+                zmemcpy_c(put, next, copy);
                 have -= copy;
                 next += copy;
                 left -= copy;
@@ -1021,7 +1024,8 @@ int flush;
         case LEN:
             if (have >= 6 && left >= 258) {
                 RESTORE();
-                inflate_fast(strm, out);
+                inflate_fast(strm, sput +
+		    ((strm->next_out - sput) - (out - strm->avail_out)));
                 LOAD();
                 if (state->mode == TYPE)
                     state->back = -1;
@@ -1154,7 +1158,7 @@ int flush;
                 if (copy > state->length) copy = state->length;
             }
             else {                              /* copy from output */
-                from = put - state->offset;
+                from = sput + ((put - sput) - state->offset);
                 copy = state->length;
             }
             if (copy > left) copy = left;
@@ -1179,7 +1183,7 @@ int flush;
                 state->total += out;
                 if (out)
                     strm->adler = state->check =
-                        UPDATE(state->check, put - out, out);
+                        UPDATE(state->check, sput + ((put - sput) - out), out);
                 out = left;
                 if ((
 #ifdef GUNZIP
@@ -1242,7 +1246,7 @@ int flush;
     state->total += out;
     if (state->wrap && out)
         strm->adler = state->check =
-            UPDATE(state->check, strm->next_out - out, out);
+            UPDATE(state->check, sput + ((strm->next_out - sput) - out), out);
     strm->data_type = state->bits + (state->last ? 64 : 0) +
                       (state->mode == TYPE ? 128 : 0) +
                       (state->mode == LEN_ || state->mode == COPY_ ? 256 : 0);
@@ -1278,9 +1282,9 @@ uInt *dictLength;
 
     /* copy dictionary */
     if (state->whave && dictionary != Z_NULL) {
-        zmemcpy(dictionary, state->window + state->wnext,
+        zmemcpy_c_fromcap(dictionary, state->window + state->wnext,
                 state->whave - state->wnext);
-        zmemcpy(dictionary + state->whave - state->wnext,
+        zmemcpy_c_fromcap(dictionary + state->whave - state->wnext,
                 state->window, state->wnext);
     }
     if (dictLength != Z_NULL)
@@ -1291,6 +1295,16 @@ uInt *dictLength;
 int ZEXPORT inflateSetDictionary(strm, dictionary, dictLength)
 z_streamp strm;
 const Bytef *dictionary;
+uInt dictLength;
+{
+    return inflateSetDictionary_c(strm,
+	cheri_ptrperm((void *)dictionary, dictLength, CHERI_PERM_LOAD),
+	dictLength);
+}
+
+int ZEXPORT inflateSetDictionary_c(strm, dictionary, dictLength)
+z_streamp strm;
+__capability const Bytef *dictionary;
 uInt dictLength;
 {
     struct inflate_state FAR *state;
@@ -1306,7 +1320,7 @@ uInt dictLength;
     /* check for correct dictionary identifier */
     if (state->mode == DICT) {
         dictid = adler32(0L, Z_NULL, 0);
-        dictid = adler32(dictid, dictionary, dictLength);
+        dictid = adler32_c(dictid, dictionary, dictLength);
         if (dictid != state->check)
             return Z_DATA_ERROR;
     }
@@ -1353,7 +1367,7 @@ gz_headerp head;
  */
 local unsigned syncsearch(have, buf, len)
 unsigned FAR *have;
-const unsigned char FAR *buf;
+__capability const unsigned char FAR *buf;
 unsigned len;
 {
     unsigned got;
@@ -1399,7 +1413,7 @@ z_streamp strm;
             state->bits -= 8;
         }
         state->have = 0;
-        syncsearch(&(state->have), buf, len);
+        syncsearch(&(state->have), (__capability unsigned char *)buf, len);
     }
 
     /* search available input */
@@ -1441,7 +1455,7 @@ z_streamp source;
 {
     struct inflate_state FAR *state;
     struct inflate_state FAR *copy;
-    unsigned char FAR *window;
+    __capability unsigned char FAR *window;
     unsigned wsize;
 
     /* check input */
@@ -1456,8 +1470,9 @@ z_streamp source;
     if (copy == Z_NULL) return Z_MEM_ERROR;
     window = Z_NULL;
     if (state->window != Z_NULL) {
-        window = (unsigned char FAR *)
-                 ZALLOC(source, 1U << state->wbits, sizeof(unsigned char));
+        window = cheri_ptr(ZALLOC(source, 1U << state->wbits,
+			   sizeof(unsigned char)), 
+			   (1U << state->wbits) * sizeof(unsigned char));
         if (window == Z_NULL) {
             ZFREE(source, copy);
             return Z_MEM_ERROR;
@@ -1475,7 +1490,7 @@ z_streamp source;
     copy->next = copy->codes + (state->next - state->codes);
     if (window != Z_NULL) {
         wsize = 1U << state->wbits;
-        zmemcpy(window, state->window, wsize);
+        zmemcpy_c(window, state->window, wsize);
     }
     copy->window = window;
     dest->state = (struct internal_state FAR *)copy;

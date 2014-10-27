@@ -7,6 +7,8 @@
 
 #include "zutil.h"
 
+#include <machine/cherireg.h>
+
 #define local static
 
 local uLong adler32_combine_ OF((uLong adler1, uLong adler2, z_off64_t len2));
@@ -65,6 +67,16 @@ local uLong adler32_combine_ OF((uLong adler1, uLong adler2, z_off64_t len2));
 uLong ZEXPORT adler32(adler, buf, len)
     uLong adler;
     const Bytef *buf;
+    uInt len;
+{
+	return (adler32_c(adler,
+	    cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD),
+	    len));
+}
+
+uLong ZEXPORT adler32_c(adler, buf, len)
+    uLong adler;
+    __capability const Bytef *buf;
     uInt len;
 {
     unsigned long sum2;

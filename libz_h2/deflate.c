@@ -329,7 +329,7 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
     uInt str, n;
     int wrap;
     unsigned avail;
-    z_const unsigned char *next;
+    __capability z_const unsigned char *next;
 
     if (strm == Z_NULL || strm->state == Z_NULL || dictionary == Z_NULL)
         return Z_STREAM_ERROR;
@@ -359,7 +359,8 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
     avail = strm->avail_in;
     next = strm->next_in;
     strm->avail_in = dictLength;
-    strm->next_in = (z_const Bytef *)dictionary;
+    strm->next_in = cheri_ptrperm((void *)dictionary, dictLength,
+	CHERI_PERM_LOAD);
     fill_window(s);
     while (s->lookahead >= MIN_MATCH) {
         str = s->strstart;
@@ -650,7 +651,8 @@ local void flush_pending(strm)
     if (len > strm->avail_out) len = strm->avail_out;
     if (len == 0) return;
 
-    zmemcpy(strm->next_out, s->pending_out, len);
+    /* XXX CHERI: cmemcpy for sandbox */
+    zmemcpy_c_tocap(strm->next_out, s->pending_out, len);
     strm->next_out  += len;
     s->pending_out  += len;
     strm->total_out += len;
@@ -1085,7 +1087,7 @@ local int read_buf(strm, buf, size)
 
     strm->avail_in  -= len;
 
-    zmemcpy(buf, strm->next_in, len);
+    zmemcpy_c_fromcap(buf, strm->next_in, len);
     if (strm->state->wrap == 1) {
         strm->adler = adler32(strm->adler, buf, len);
     }
