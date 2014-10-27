@@ -1,0 +1,6 @@
+.include "../cheridefs.mk"
+LIB=zwrapper
+USE_CHERI=yes
+SRCS+=zwrapper.c
+.include <bsd.lib.mk>
+

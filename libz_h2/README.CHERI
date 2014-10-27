@@ -1,0 +1,5 @@
+There are three components to libz_h2:
+1. zlib itself, modified to work with CHERI by the addition of capability annotations, etc. The code expects to be run in a sandbox.
+2. libzwrapper, which provides a wrapper around sandbox creation and invocation on the application side.
+3. lzsandbox-helper, which implements the sandbox class. It expects to be linked (statically) with zlib, and provides an interface to zlib via zwrapper. The build process produces lzsandbox-helper.bin, a binary executable to be loaded dynamically when a sandbox is created. The loading is handled by zwrapper (which in turn uses libcheri).
+

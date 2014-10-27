@@ -8,7 +8,7 @@
 PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 
-LDADD=		../libz_h2/libz.a
+LDADD=		../libz_h2/libzwrapper.a
 CFLAGS+= -I../libz_h2/
 CFLAGS+= -g
 
