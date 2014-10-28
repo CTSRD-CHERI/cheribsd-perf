@@ -31,6 +31,11 @@
 #ifndef ZLIB_H
 #define ZLIB_H
 
+#if !defined(ZLIB_INCL_SANDBOX) && \
+    !defined(ZLIB_INCL_WRAPPER)
+#define ZLIB_INCL_APP
+#endif /* !ZLIB_INCL_SANDBOX && !ZLIB_INCL_WRAPPER */
+
 #include <machine/cheri.h>
 #include <cheri/sandbox.h>
 #include "zconf.h"
@@ -84,11 +89,6 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 
 struct internal_state;
 
-#if !defined(ZLIB_INCL_SANDBOX) && \
-    !defined(ZLIB_INCL_WRAPPER)
-#define ZLIB_INCL_APP
-#endif /* !ZLIB_INCL_SANDBOX && !ZLIB_INCL_WRAPPER */
-
 typedef struct z_stream_s {
 #if defined(ZLIB_INCL_APP)
     z_const Bytef *next_in;     /* next input byte */
@@ -116,6 +116,7 @@ typedef struct z_stream_s {
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 
+    /* XXX: this won't work properly in sandbox mode */
     z_const char *msg;  /* last error message, NULL if no error */
     struct internal_state FAR *state; /* not visible by applications */
 
@@ -129,7 +130,15 @@ typedef struct z_stream_s {
     struct sandbox_object * sbop;
 } z_stream;
 
+/* XXX: it's not nice, but it makes things work */
+#if defined(ZLIB_INCL_APP)
 typedef z_stream FAR *z_streamp;
+#elif defined(ZLIB_INCL_SANDBOX)
+typedef __capability z_stream FAR *z_streamp;
+#elif defined(ZLIB_INCL_WRAPPER)
+typedef z_stream FAR *z_streamp;
+#endif
+typedef __capability z_stream FAR *z_streamp_c;
 
 /*
      gzip header information passed to and from zlib routines.  See RFC 1952
@@ -269,6 +278,7 @@ ZEXTERN int ZEXPORT deflateInit OF((z_streamp strm, int level));
 */
 
 
+ZEXTERN int ZEXPORT deflate_c OF((z_streamp strm, int flush));
 ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
 /*
     deflate compresses as much data as possible, and stops when the input
@@ -1669,6 +1679,7 @@ ZEXTERN int ZEXPORT deflateInit_ OF((z_streamp strm, int level,
                                      const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateInit_ OF((z_streamp strm,
                                      const char *version, int stream_size));
+ZEXTERN int ZEXPORT deflateInit2_c OF((z_streamp strm, __capability void * vparams));
 ZEXTERN int ZEXPORT deflateInit2_ OF((z_streamp strm, int  level, int  method,
                                       int windowBits, int memLevel,
                                       int strategy, const char *version,

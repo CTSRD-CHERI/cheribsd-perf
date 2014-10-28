@@ -1,7 +1,22 @@
+# $FreeBSD$
+
 .include "../cheridefs.mk"
+
 LIB=zwrapper
+SHLIB_MAJOR=1
 USE_CHERI=yes
-SRCS+=zwrapper.c
-LDADD+=../libcheri_u/libcheri.a
-.include <bsd.lib.mk>
+SRCS=zwrapper.c
+CFLAGS+=-DZLIB_INCL_WRAPPER
+
+all: zwrapper.o
+	$(AR) -r tmp.a zwrapper.o
+	mkdir -p tmpdir
+	cd tmpdir && \
+	$(AR) -x ../../libcheri_u/libcheri.a && \
+	cd ..
+	$(AR) -r lib$(LIB).a zwrapper.o tmpdir/*.o
+
+clean:
+	rm -f zwrapper.o lib$(LIB).a
+	rm -rf tmpdir
 

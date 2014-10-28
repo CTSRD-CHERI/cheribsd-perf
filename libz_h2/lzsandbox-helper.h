@@ -1,15 +1,30 @@
 #ifndef _LZSANDBOX_HELPER_H_
 #define _LZSANDBOX_HELPER_H_
 
-/* include zlib.h before including this file, with the appropriate ZLIB_INCL_ defined */
+/* before including this file, appropriately define the ZLIB_INCL_* */
+#include "zlib.h"
 
-#define LZOP_DEFLATE 0
+#define LZOP_DEFLATEINIT2 0
+#define LZOP_DEFLATE      1
 
 #include <machine/cheri.h>
 #include <machine/cheric.h>
 
 struct lzparams
 {
+  z_streamp_c strm;
+
+  /* deflate_c */
+  int flush;
+
+  /* deflateInit2_c */
+  int  level;
+  int  method;
+  int  windowBits;
+  int  memLevel;
+  int  strategy;
+  __capability const char *version;
+  int stream_size;
 };
 
 #endif /* !_LZSANDBOX_HELPER_H_ */

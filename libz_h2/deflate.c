@@ -50,6 +50,9 @@
 /* @(#) $Id$ */
 
 #include "deflate.h"
+#include "lzsandbox-helper.h"
+
+ZEXTERN int ZEXPORT deflate_c OF((z_streamp strm, int flush));
 
 const char deflate_copyright[] =
    " deflate 1.2.8 Copyright 1995-2013 Jean-loup Gailly and Mark Adler ";
@@ -204,23 +207,32 @@ int ZEXPORT deflateInit_(strm, level, version, stream_size)
     const char *version;
     int stream_size;
 {
-    return deflateInit2_(strm, level, Z_DEFLATED, MAX_WBITS, DEF_MEM_LEVEL,
-                         Z_DEFAULT_STRATEGY, version, stream_size);
+  struct lzparams params;
+  params.strm = strm;
+  params.level = level;
+  params.method = Z_DEFLATED;
+  params.windowBits = MAX_WBITS;
+  params.memLevel = DEF_MEM_LEVEL;
+  params.strategy = Z_DEFAULT_STRATEGY;
+  params.version = version ? cheri_ptr((void*)version, strlen(version)+1) : version;
+  params.stream_size = stream_size;
+    return deflateInit2_c(strm, cheri_ptr(&params, sizeof params));
     /* To do: ignore strm->next_in if we use it as window */
 }
 
 /* ========================================================================= */
-int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
-                  version, stream_size)
-    z_streamp strm;
-    int  level;
-    int  method;
-    int  windowBits;
-    int  memLevel;
-    int  strategy;
-    const char *version;
-    int stream_size;
+ZEXTERN int ZEXPORT deflateInit2_c OF((z_streamp strm, __capability void * vparams));
+int ZEXPORT deflateInit2_c (z_streamp strm, __capability void * vparams)
 {
+  __capability struct lzparams * params = vparams;
+  int  level = params->level;
+  int  method = params->method;
+  int  windowBits = params->windowBits;
+  int  memLevel = params->memLevel;
+  int  strategy = params->strategy;
+  __capability const char *version = params->version;
+  int stream_size = params->stream_size;
+
     deflate_state *s;
     int wrap = 1;
     static const char my_version[] = ZLIB_VERSION;
@@ -513,7 +525,7 @@ int ZEXPORT deflateParams(strm, level, strategy)
     if ((strategy != s->strategy || func != configuration_table[level].func) &&
         strm->total_in != 0) {
         /* Flush the last buffer: */
-        err = deflate(strm, Z_BLOCK);
+        err = deflate_c(strm, Z_BLOCK);
         if (err == Z_BUF_ERROR && s->pending == 0)
             err = Z_OK;
     }
@@ -664,7 +676,7 @@ local void flush_pending(strm)
 }
 
 /* ========================================================================= */
-int ZEXPORT deflate (strm, flush)
+int ZEXPORT deflate_c (strm, flush)
     z_streamp strm;
     int flush;
 {

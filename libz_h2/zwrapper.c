@@ -1,4 +1,3 @@
-#define ZLIB_INCL_WRAPPER
 #include "zlib.h"
 #include "lzsandbox-helper.h"
 
@@ -79,10 +78,13 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 
 int ZEXPORT deflate (z_streamp strm, int flush)
 {
-  /* TODO: create sandbox etc */
   struct lzparams params;
-  (void)strm;
-  (void)flush;
+  /* lzsandbox-helper and the user app (e.g. gzip) have a different view of z_streamp; this syncs them up */
+  strm->next_in_c = cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD);
+  strm->next_out_c = cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE);
+  params.strm = cheri_ptrperm(strm,
+    sizeof(z_streamp), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP);
+  params.flush = flush;
   return lzsandbox_invoke(strm, LZOP_DEFLATE, &params);
 }
 

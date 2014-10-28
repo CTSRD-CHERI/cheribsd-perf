@@ -17,8 +17,6 @@ extern __capability void	*cheri_system_type;
 #include <stdlib.h>
 #include <string.h>
 
-#define ZLIB_INCL_SANDBOX
-#include "zlib.h"
 #include "lzsandbox-helper.h"
 
 static struct cheri_object stderrfd;
@@ -98,6 +96,7 @@ invoke(register_t op,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams)
 {
+  __capability struct lzparams * params = vparams;
   __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Winline-asm"
@@ -109,12 +108,20 @@ invoke(register_t op,
   /* reconstruct the cheri_objects */
   if (!initialized)
   {
-    if (op == LZOP_DEFLATE)
+    if (0/*op == LZOP_INIT*/)
     {
       stderrfd.co_codecap = co_codecap_stderrfd;
       stderrfd.co_datacap = co_datacap_stderrfd;
       fprintf_c(stderrfd, "in invoke(), initialized.\n");
       initialized = 1;
+    }
+    else if (op == LZOP_DEFLATEINIT2)
+    {
+      return deflateInit2_c(params->strm, params);
+    }
+    else if (op == LZOP_DEFLATE)
+    {
+      return deflate_c(params->strm, params->flush);
     }
   }
   return 0;
