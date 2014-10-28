@@ -130,6 +130,8 @@ invoke(register_t op,
     return deflate_c(params->strm, params->flush);
   else if (op == LZOP_DEFLATEEND)
     return deflateEnd(params->strm);
+  else if (op == LZOP_CRC32)
+    return crc32_c(params->crc, params->buf, params->len);
   else
   {
     fprintf_c(stderrfd, "invoke: unrecognized op: %d\n", (int) op);

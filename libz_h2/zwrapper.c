@@ -13,7 +13,7 @@
 static int			 lzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
-/* XXX: stderr for debugging only */
+/* stderr for debugging only */
 struct cheri_object stderrfd;
 
 #define LZ_SANDBOX_BIN "lzsandbox-helper.bin"
@@ -37,7 +37,7 @@ static int lzsandbox_initialize (z_streamp strm)
       return -1;
     }
   
-    /* XXX: stderr for debugging only */
+    /* stderr for debugging only */
     if (cheri_fd_new(STDERR_FILENO, &stderrfd) < 0)
     {
       fprintf(stderr, "cheri_fd_new: STDERR_FILENO\n");
@@ -79,15 +79,25 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 
 int ZEXPORT deflate (z_streamp strm, int flush)
 {
+  int rc;
   struct lzparams params;
   memset(&params, 0, sizeof params);
+
   /* lzsandbox-helper and the user app (e.g. gzip) have a different view of z_streamp; this syncs them up */
   strm->next_in_c = cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD);
   strm->next_out_c = cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE);
+
   params.strm = cheri_ptrperm(strm,
     sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE | CHERI_PERM_STORE_CAP | CHERI_PERM_STORE_LOCAL_CAP);
   params.flush = flush;
-  return lzsandbox_invoke(strm, LZOP_DEFLATE, &params);
+
+  rc = lzsandbox_invoke(strm, LZOP_DEFLATE, &params);
+  
+  /* restore next_in, next_out */
+  strm->next_in_p = (void*)strm->next_in_c;
+  strm->next_out_p = (void*)strm->next_out_c;
+
+  return rc;
 }
 
 int ZEXPORT inflate (z_streamp strm, int flush)
@@ -130,10 +140,19 @@ int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
 
 uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
 {
-  (void)crc;
-  (void)buf;
-  (void)len;
-  return -1;
+  struct lzparams params;
+  memset(&params, 0, sizeof params);
+  params.crc = crc;
+  params.buf = buf ? cheri_ptrperm(buf, len, CHERI_PERM_LOAD) : buf;
+  params.len = len;
+
+  /* create a temporary sandbox, or use existing one;
+   * lzsandbox_initialize and lzsandbox_invoke deal with this
+   */
+  z_stream strm;
+  lzsandbox_initialize(&strm);
+  return lzsandbox_invoke(&strm, LZOP_CRC32, &params);
+  /* XXX: need some way of destroying this sandbox */
 }
 
 int ZEXPORT inflateEnd (z_streamp strm)
@@ -147,6 +166,6 @@ int ZEXPORT deflateEnd (z_streamp strm)
   struct lzparams params;
   memset(&params, 0, sizeof params);
   params.strm = cheri_ptrperm(strm,
-    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE); /* XXX: no sync up of cap ptrs; deflateEnd doesn't need them */
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE); /* no sync up of cap ptrs; deflateEnd doesn't need them */
   return lzsandbox_invoke(strm, LZOP_DEFLATEEND, &params);
 }

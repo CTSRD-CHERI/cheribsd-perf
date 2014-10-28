@@ -242,8 +242,6 @@ int ZEXPORT deflateInit2_c (z_streamp strm, __capability void * vparams)
      * output size for (length,distance) codes is <= 24 bits.
      */
 
-    ef("in deflateInit2_c\n");
-
     if (version == Z_NULL || version[0] != my_version[0] ||
         stream_size != sizeof(z_stream)) {
         return Z_VERSION_ERROR;

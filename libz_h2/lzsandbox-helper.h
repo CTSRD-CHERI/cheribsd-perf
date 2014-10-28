@@ -7,6 +7,7 @@
 #define LZOP_DEFLATEINIT2 0
 #define LZOP_DEFLATE      1
 #define LZOP_DEFLATEEND   2
+#define LZOP_CRC32        3
 
 #include <machine/cheri.h>
 #include <machine/cheric.h>
@@ -26,6 +27,11 @@ struct lzparams
   int  strategy;
   __capability const char *version;
   int stream_size;
+
+  /* crc32 */
+  uLong crc;
+  __capability const Bytef * buf;
+  uInt len;
 };
 
 int ef (const char * format, ...);
