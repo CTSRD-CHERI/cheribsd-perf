@@ -116,8 +116,9 @@ typedef struct z_stream_s {
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
 
-    /* XXX: this won't work properly in sandbox mode */
+    /* XXX: disabled by zwrapper */
     z_const char *msg;  /* last error message, NULL if no error */
+
     struct internal_state FAR *state; /* not visible by applications */
 
     alloc_func zalloc;  /* used to allocate the internal state */

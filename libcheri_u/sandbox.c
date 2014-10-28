@@ -192,14 +192,11 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	int error;
   register_t rc;
 
-  printf("creating new object...\n");
-
 	sbop = calloc(1, sizeof(*sbop));
 	if (sbop == NULL)
 		return (-1);
 	sbop->sbo_sandbox_classp = sbcp;
 
-  printf("loading sandbox object into memory\n");
 	error = sandbox_object_load(sbcp, sbop);
 	if (error) {
 		free(sbop);
@@ -214,19 +211,15 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	 *
 	 * NB: Should we be passing in a system-class reference...?
 	 */
-  printf("invoking object instance constructors\n");
-  rc = 0x1234;
 	rc = cheri_invoke(sbop->sbo_cheri_object,
           SANDBOX_RUNTIME_CONSTRUCTORS, 0, 0, 0, 0, 0, 0, 0,
           cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
           cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
           cheri_zerocap(), cheri_zerocap());
-  printf("cheri_invoke returned 0x%x\n", (unsigned) rc);
 
 	/*
 	 * Now that constructors have completed, return object.
 	 */
-  printf("returning object\n");
 	*sbopp = sbop;
 	return (0);
 }

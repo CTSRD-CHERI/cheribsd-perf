@@ -1099,6 +1099,7 @@ local int read_buf(strm, buf, size)
 
     strm->avail_in  -= len;
 
+    /* XXX: fails because buf doesn't have PERM_LOAD_CAP but libc/mips/string/memcpy_c.s:copy_caps tries to clc/csc */
     zmemcpy_c_fromcap(buf, strm->next_in, len);
     if (strm->state->wrap == 1) {
         strm->adler = adler32(strm->adler, buf, len);

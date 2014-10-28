@@ -120,9 +120,9 @@ invoke(register_t op,
     /* reconstruct the cheri_object */
     stderrfd.co_codecap = co_codecap_stderrfd;
     stderrfd.co_datacap = co_datacap_stderrfd;
-    fprintf_c(stderrfd, "in invoke(), initialized.\n");
+    /*fprintf_c(stderrfd, "in invoke(), initialized.\n");*/
   }
-  fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
+  /*fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);*/
 
   if (op == LZOP_DEFLATEINIT2)
     return deflateInit2_c(params->strm, params);
