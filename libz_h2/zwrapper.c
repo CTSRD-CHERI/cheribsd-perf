@@ -124,6 +124,12 @@ int ZEXPORT deflate (z_streamp strm, int flush)
    * Should other strm parameters be checked for sanity?
    */
 
+  /* XXX: even with this check, there's nothing stopping the sandbox
+   * from not increasing next_in. That is, we need to ensure
+   * progress; otherwise, a sandbox could potentially cause
+   * non-termination in the user application.
+   */
+
   if (!subcap(cheri_ptr(strm->next_in_p, strm->avail_in), in) ||
       !subcap(cheri_ptr(strm->next_out_p, strm->avail_out), out))
   {
