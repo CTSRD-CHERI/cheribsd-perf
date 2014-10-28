@@ -70,7 +70,7 @@ uLong ZEXPORT adler32(adler, buf, len)
     uInt len;
 {
 	return (adler32_c(adler,
-	    cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD),
+	    buf ? cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD) : buf,
 	    len));
 }
 

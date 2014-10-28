@@ -90,6 +90,16 @@ size_t strlen_c (__capability const char * str)
   return len;
 }
 
+int ef (const char * format, ...)
+{
+  int rc;
+  va_list ap;
+  va_start(ap, format);
+  rc = vfprintf_c(stderrfd, format, ap);
+  va_end(ap);
+  return rc;
+}
+
 int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,
@@ -97,32 +107,34 @@ invoke(register_t op,
   __capability void * vparams)
 {
   __capability struct lzparams * params = vparams;
+  static int initialized = 0;
   __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Winline-asm"
   __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
 #pragma clang diagnostic pop
-  static int initialized = 0;
-  if (initialized)
-    fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
-  /* reconstruct the cheri_objects */
+
   if (!initialized)
   {
-    if (0/*op == LZOP_INIT*/)
-    {
-      stderrfd.co_codecap = co_codecap_stderrfd;
-      stderrfd.co_datacap = co_datacap_stderrfd;
-      fprintf_c(stderrfd, "in invoke(), initialized.\n");
-      initialized = 1;
-    }
-    else if (op == LZOP_DEFLATEINIT2)
-    {
-      return deflateInit2_c(params->strm, params);
-    }
-    else if (op == LZOP_DEFLATE)
-    {
-      return deflate_c(params->strm, params->flush);
-    }
+    initialized = 1;
+    /* reconstruct the cheri_object */
+    stderrfd.co_codecap = co_codecap_stderrfd;
+    stderrfd.co_datacap = co_datacap_stderrfd;
+    fprintf_c(stderrfd, "in invoke(), initialized.\n");
   }
+  fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
+
+  if (op == LZOP_DEFLATEINIT2)
+    return deflateInit2_c(params->strm, params);
+  else if (op == LZOP_DEFLATE)
+    return deflate_c(params->strm, params->flush);
+  else if (op == LZOP_DEFLATEEND)
+    return deflateEnd(params->strm);
+  else
+  {
+    fprintf_c(stderrfd, "invoke: unrecognized op: %d\n", (int) op);
+    return -2;
+  }
+
   return 0;
 }

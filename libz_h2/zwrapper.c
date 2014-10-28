@@ -8,6 +8,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 
 static int			 lzsandbox_initialized;
 static struct    sandbox_class * sbcp;
@@ -70,7 +71,7 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 #endif /* LZ_SINGLE_SANDBOX */
   return sandbox_object_cinvoke(local_sbop, opno, 
             0, 0, 0, 0, 0, 0, 0,
-            cheri_zerocap(), cheri_zerocap(),
+            stderrfd.co_codecap, stderrfd.co_datacap,
             cheri_ptrperm(params, sizeof(struct lzparams), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
@@ -79,11 +80,12 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 int ZEXPORT deflate (z_streamp strm, int flush)
 {
   struct lzparams params;
+  memset(&params, 0, sizeof params);
   /* lzsandbox-helper and the user app (e.g. gzip) have a different view of z_streamp; this syncs them up */
   strm->next_in_c = cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD);
   strm->next_out_c = cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE);
   params.strm = cheri_ptrperm(strm,
-    sizeof(z_streamp), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP);
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE | CHERI_PERM_STORE_CAP | CHERI_PERM_STORE_LOCAL_CAP);
   params.flush = flush;
   return lzsandbox_invoke(strm, LZOP_DEFLATE, &params);
 }
@@ -100,16 +102,19 @@ int ZEXPORT deflateInit2_ (z_streamp strm, int  level, int  method,
                            int strategy, const char *version,
                            int stream_size)
 {
+  struct lzparams params;
+  memset(&params, 0, sizeof params);
   lzsandbox_initialize(strm);
-  (void)strm;
-  (void)level;
-  (void)method;
-  (void)windowBits;
-  (void)memLevel;
-  (void)strategy;
-  (void)version;
-  (void)stream_size;
-  return -1;
+  params.strm = cheri_ptrperm(strm,
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE); /* XXX: need to sync up cap ptrs? */
+  params.level = level;
+  params.method = method;
+  params.windowBits = windowBits;
+  params.memLevel = memLevel;
+  params.strategy = strategy;
+  params.version = cheri_ptrperm(version, strlen(version)+1, CHERI_PERM_LOAD);
+  params.stream_size = stream_size;
+  return lzsandbox_invoke(strm, LZOP_DEFLATEINIT2, &params);
 }
 
 int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
@@ -139,6 +144,9 @@ int ZEXPORT inflateEnd (z_streamp strm)
 
 int ZEXPORT deflateEnd (z_streamp strm)
 {
-  (void)strm;
-  return -1;
+  struct lzparams params;
+  memset(&params, 0, sizeof params);
+  params.strm = cheri_ptrperm(strm,
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE); /* XXX: no sync up of cap ptrs; deflateEnd doesn't need them */
+  return lzsandbox_invoke(strm, LZOP_DEFLATEEND, &params);
 }

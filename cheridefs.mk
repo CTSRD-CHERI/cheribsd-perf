@@ -12,7 +12,7 @@ CFLAGS+=--sysroot=$(CHERI_SYSROOT) -DGIT_COMMIT_STRING=$(GIT_COMMIT_STRING)
 CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 
 CHERI_SSH_HOST:=oregano
-CHERI_PUSH=/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8889
+CHERI_PUSH=/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8888
 
 MACHINE_ARCH=mips64
 MACHINE=mips
