@@ -13,12 +13,18 @@ GZIP_H_LDADD=../libcheri_u/libcheri.a
 GZIP_H_HELPER_LDADD=../libz_u/libz.a ../libc_cheri_u/libc_cheri.a
 GZIP_U_LIBZ_H_LDADD=../libz_h2/libzwrapper.a
 
-all: gzip_u gzip_a gzip_h gzip_u_libz_h
+all: dep progs
 		echo done
 
-everything: clean clean-dep dep all push
+clean: clean-dep clean-progs
+		echo done
 
-dep: libz_u libz_h2 libcheri_u libc_cheri_u libsep
+progs: gzip_u gzip_a gzip_h gzip_u_libz_h
+		echo done
+
+everything: clean all push
+
+dep: libz_u libcheri_u libc_cheri_u libsep libz_h2
 		echo done
 
 clean-dep: clean-libz_u clean-libz_h2 clean-libcheri_u clean-libc_cheri_u clean-libsep
@@ -104,7 +110,7 @@ gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o
 gzip_u_libz_h: gzip_u_libz_h.o
 		$(CC) $(CFLAGS) -o gzip_u_libz_h gzip_u_libz_h.o $(GZIP_U_LIBZ_H_LDADD)
 
-clean:
+clean-progs:
 		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzsandbox-helper_h gzsandbox-helper_h.bin
 
 push:
@@ -114,3 +120,4 @@ push:
 		$(CHERI_PUSH) gzip_u_libz_h $(CHERI_PUSH_DIR)/gzip_u_libz_h
 		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin $(CHERI_PUSH_DIR)/lzsandbox-helper.bin
 		$(CHERI_PUSH) gzsandbox-helper_h.bin $(CHERI_PUSH_DIR)/gzsandbox-helper_h.bin
+		$(CHERI_PUSH) test.sh $(CHERI_PUSH_DIR)/test.sh

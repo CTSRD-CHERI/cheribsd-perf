@@ -603,6 +603,7 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 				 0, OS_CODE };
 #endif
 
+  printf("BUFLEN: %d\n", (int) BUFLEN);
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
 	if (outbufp == NULL || inbufp == NULL) {

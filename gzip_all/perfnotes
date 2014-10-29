@@ -1,0 +1,16 @@
+gzip_a (gzip with Capsicum sandboxing): 50.41 sec (5MB), 1.30 sec (100kB)
+  - Fastest.
+  - No domain crossings, so expected.
+  - But faster than gzip_u?!
+
+gzip_u_libz_h (gzip unmodified with libcheri/cheri_fd sandboxing of libz): 55.59 sec (5MB) 1.93 sec (100 kB)
+  - Faster than gzip_u for a 5MB file...
+  - But has 4 x domain crossings per iteration (1 x crc32 and 1 x deflate), similar to gzip_h.
+
+gzip_u (gzip unmodified): 75.17 sec (5MB), 1.70 sec (100kB)
+  - Surprising...
+
+gzip_h (gzip with libcheri/cheri_fd sandboxing): 80.86 sec (5MB), 2.54 sec (100kB)
+  - Slowest.
+  - Expected because write_c, read_c are slow (2 x domain crossings each), and there are O(file size) many calls.
+
