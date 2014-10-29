@@ -20,13 +20,13 @@ static int			 gzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
 
-#include "gzsandbox-helper.h"
+#include "gzsandbox-helper_h.h"
 #include <machine/cheri.h>
 #include <machine/cheric.h>
 #include <cheri/cheri_fd.h>
 #include <cheri/sandbox.h>
 
-#define GZIP_SANDBOX_BIN "gzsandbox-helper.bin"
+#define GZIP_SANDBOX_BIN "gzsandbox-helper_h.bin"
 
 static void
 gzsandbox_initialize(void);

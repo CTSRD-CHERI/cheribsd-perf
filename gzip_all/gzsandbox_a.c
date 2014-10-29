@@ -397,7 +397,7 @@ int gzsandbox(void * context)
 		case PROXIED_GZ_COMPRESS:
 			if (fdcount != 2)
 				errx(-1, "sandbox_workloop: %d fds", fdcount);
-			sandbox_gz_compress_buffer(lchp, opno, seqno, buffer,
+			sandbox_gz_compress_buffer(lchp, opno, seqno, (char*)buffer,
 			    len, fdarray[0], fdarray[1]);
 			close(fdarray[0]);
 			close(fdarray[1]);
@@ -407,7 +407,7 @@ int gzsandbox(void * context)
 			if (fdcount != 2)
 				errx(-1, "sandbox_workloop: %d fds", fdcount);
 			sandbox_gz_uncompress_buffer(lchp, opno, seqno,
-			    buffer, len, fdarray[0], fdarray[1]);
+			    (char*)buffer, len, fdarray[0], fdarray[1]);
 			close(fdarray[0]);
 			close(fdarray[1]);
 			break;

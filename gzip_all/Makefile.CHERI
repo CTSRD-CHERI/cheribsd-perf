@@ -4,8 +4,8 @@ LDADD=		../libz_u/libz.a
 CFLAGS+=-DNO_XZ_SUPPORT -DNO_BZIP2_SUPPORT
 
 GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\"
-GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -I../libsep/
-GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\"
+GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/
+GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI 
 
 GZIP_U_LDADD=../libz_u/libz.a
 GZIP_A_LDADD=../libz_u/libz.a ../libsep/libsep.a

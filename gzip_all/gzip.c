@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD$");
 
 #if defined(SB_GZIP_LIBCHERI)
 #include "gzip.h"
-#include "gzsandbox-helper.h"
+#include "gzsandbox-helper_h.h"
 #elif defined(SB_GZIP_CAPSICUM)
 #include "gzip.h"
 #endif /* SB_GZIP_LIBCHERI */
@@ -246,10 +246,10 @@ static	enum filetype file_gettype(u_char *);
 #ifdef SMALL
 #define gz_compress(if, of, sz, fn, tm) gz_compress(if, of, sz)
 #endif
-#if !defined(SB_GZIP_LIBCHERI)
+#if !defined(SB_GZIP_LIBCHERI) && !defined(SB_GZIP_CAPSICUM)
 static	off_t	gz_compress(int, int, off_t *, const char *, uint32_t);
 static	off_t	gz_uncompress(int, int, char *, size_t, off_t *, const char *);
-#endif /* !SB_GZIP_LIBCHERI */
+#endif /* !SB_GZIP_LIBCHERI && !SB_GZIP_CAPSICUM */
 static	off_t	file_compress(char *, char *, size_t);
 static	off_t	file_uncompress(char *, char *, size_t);
 static	void	handle_pathname(char *);
@@ -794,7 +794,10 @@ out:
  * uncompressed size written, and put the compressed sized read
  * into `*gsizep'.
  */
-static off_t
+#if !defined(SB_GZIP_CAPSICUM)
+static
+#endif /* !SB_GZIP_CAPSICUM */
+off_t
 gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 	      const char *filename)
 {
@@ -1372,11 +1375,11 @@ file_compress(char *file, char *outfile, size_t outsize)
 		out = STDOUT_FILENO;
 
   insize =
-#if defined(SB_GZIP_CAPSICUM)
+#if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
 	gz_compress_wrapper
-#else /* SB_GZIP_CAPSICUM */
+#else /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
 	gz_compress
-#endif /* SB_GZIP_CAPSICUM */
+#endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     (in, out, &size, basename(file), (uint32_t)isb.st_mtime);
 
 	(void)close(in);
@@ -1642,11 +1645,11 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 		}
 
 		size =
-#if defined(SB_GZIP_CAPSICUM)
+#if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
     gz_uncompress_wrapper
-#else /* SB_GZIP_CAPSICUM */
+#else /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     gz_uncompress
-#endif /* SB_GZIP_CAPSICUM */
+#endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
       (fd, zfd, NULL, 0, NULL, file);
 		break;
 	}
@@ -1806,11 +1809,11 @@ handle_stdin(void)
 #endif
 	case FT_GZIP:
 		usize =
-#if defined(SB_GZIP_CAPSICUM)
+#if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
     gz_uncompress_wrapper
-#else /* SB_GZIP_CAPSICUM */
+#else /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     gz_uncompress
-#endif /* SB_GZIP_CAPSICUM */
+#endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
       (STDIN_FILENO, STDOUT_FILENO, 
 			      (char *)header1, sizeof header1, &gsize, "(stdin)");
 		break;
@@ -1900,11 +1903,11 @@ handle_stdout(void)
 	}
 	 		
 	usize =
-#if defined(SB_GZIP_CAPSICUM)
+#if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
   gz_compress_wrapper
-#else /* SB_GZIP_CAPSICUM */
+#else /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
   gz_compress
-#endif /* SB_GZIP_CAPSICUM */
+#endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     (STDIN_FILENO, STDOUT_FILENO, &gsize, "", mtime);
 #ifndef SMALL
         if (vflag && !tflag && usize != -1 && gsize != -1)
