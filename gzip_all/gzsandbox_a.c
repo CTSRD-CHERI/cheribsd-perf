@@ -168,7 +168,6 @@ off_t
 gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
     uint32_t mtime)
 {
-
 	gzsandbox_initialize();
 	if (gzsandbox_enabled)
 		return (gz_compress_insandbox(in, out, gsizep, origname,

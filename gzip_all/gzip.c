@@ -602,8 +602,6 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 				 0, 0, 0, 0,
 				 0, OS_CODE };
 #endif
-
-  printf("BUFLEN: %d\n", (int) BUFLEN);
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
 	if (outbufp == NULL || inbufp == NULL) {
@@ -673,6 +671,8 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		goto out;
 	}
 
+struct timeval before, after, diff, total;
+  total.tv_sec = 0; total.tv_usec = 0;
 	crc = crc32(0L, Z_NULL, 0);
 	for (;;) {
 		if (z.avail_out == 0) {
@@ -703,13 +703,18 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 			z.avail_in = in_size;
 		}
 
+//gettimeofday(&before, NULL);
 		error = deflate(&z, Z_NO_FLUSH);
+//gettimeofday(&after, NULL);
+//timersub(&after, &before, &diff);
+//timeradd(&total, &diff, &total);
 		if (error != Z_OK && error != Z_STREAM_END) {
 			maybe_warnx("deflate failed");
 			in_tot = -1;
 			goto out;
 		}
 	}
+//fprintf(stderr, "deflate time: %llu us\n", (unsigned long long)total.tv_sec*1000000ULL+(unsigned long long)total.tv_usec);
 
 	/* clean up */
 	for (;;) {
@@ -1375,6 +1380,8 @@ file_compress(char *file, char *outfile, size_t outsize)
 	} else
 		out = STDOUT_FILENO;
 
+struct timeval before, after, diff;
+  //gettimeofday(&before, NULL);
   insize =
 #if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
 	gz_compress_wrapper
@@ -1382,6 +1389,9 @@ file_compress(char *file, char *outfile, size_t outsize)
 	gz_compress
 #endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     (in, out, &size, basename(file), (uint32_t)isb.st_mtime);
+  //gettimeofday(&after, NULL);
+  //timersub(&after, &before, &diff);
+  //fprintf(stderr, "gz_compress time: %llu us\n", (unsigned long long)diff.tv_sec*1000000ULL+(unsigned long long)diff.tv_usec);
 
 	(void)close(in);
 

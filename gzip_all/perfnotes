@@ -14,3 +14,9 @@ gzip_h (gzip with libcheri/cheri_fd sandboxing): 80.86 sec (5MB), 2.54 sec (100k
   - Slowest.
   - Expected because write_c, read_c are slow (2 x domain crossings each), and there are O(file size) many calls.
 
+
+TO TRY:
+malloc(128k) then offset one by 32B or so (or 128B for the other one, if 32B doesn't work for just one)
+-> L1&L2 in CHERI direct-mapped! ((L2 probably direct-mapped))
+-> low-order bits used for indexing (basically VIPT)
+-> possibly getting aliasing 
