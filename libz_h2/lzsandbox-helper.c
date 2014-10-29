@@ -100,6 +100,26 @@ int ef (const char * format, ...)
   return rc;
 }
 
+void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len)
+{
+  bufcpy_c(cheri_ptr(dst, len), src, len);
+  return dst;
+}
+
+__capability void * bufcpy_c_tocap (__capability void * dst, const void * src, size_t len)
+{
+  return bufcpy_c(dst, cheri_ptr((void*)src, len), len);
+}
+
+__capability void * bufcpy_c (__capability void * dst, __capability const void * src, size_t len)
+{
+  __capability char * cdst = dst;
+  __capability const char * csrc = src;
+  while (len--)
+    *(cdst++) = *(csrc++);
+  return dst;
+}
+
 int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,

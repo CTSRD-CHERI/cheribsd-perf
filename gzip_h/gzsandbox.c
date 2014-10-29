@@ -55,7 +55,6 @@ gzsandbox_initialize(void)
   params.qflag = qflag;
   params.tflag = tflag;
   
-  printf("INVOKE\n");
   if (sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
             0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
@@ -63,7 +62,6 @@ gzsandbox_initialize(void)
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap()))
     err(-1, "sandbox_object_cinvoke");
-  printf("INVOKED\n");
 }
 
 off_t

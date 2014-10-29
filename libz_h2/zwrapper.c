@@ -204,7 +204,7 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
   struct lzparams params;
   memset(&params, 0, sizeof params);
   params.crc = crc;
-  params.buf = buf ? cheri_ptrperm(buf, len, CHERI_PERM_LOAD) : buf;
+  params.buf = buf ? cheri_ptrperm((void*)buf, len, CHERI_PERM_LOAD) : buf;
   params.len = len;
 
   /* create a temporary sandbox, or use existing one;

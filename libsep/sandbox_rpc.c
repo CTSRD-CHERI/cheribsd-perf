@@ -47,7 +47,6 @@ _sandbox_rpc_receive_rights(struct msghdr *msg, int *fdp, int *fdcountp)
 		fdcount += (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
 		scmrightscount++;
 	}
-  printf("[%d] received %d fds\n", getpid(), fdcount);
 
 	if (scmrightscount > 1 || fdcount > *fdcountp) {
 		for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
@@ -141,8 +140,6 @@ _sandbox_rpc_send_rights(int fd, const void *msg, size_t len, int flags, int
 		retlen = sendmsg(fd, &msghdr, flags);
 	} while (retlen < 0 && errno == EINTR);
 
-  printf("[%d] sent %d fds\n", getpid(), fdcount);
-
 	return (retlen);
 }
 
@@ -150,8 +147,6 @@ ssize_t
 _sandbox_rpc_recv(int fd, void *buf, size_t len, int flags)
 {
 	ssize_t retlen;
-
-  fprintf(stderr, "_sandbox_rpc_recv: fd=%d, buf=%p, len=%lu, flags=%d\n", fd, buf, (unsigned long) len, flags);
 
 	if (fd == -1 || fd == 0) {
 		errno = ESRCH;
@@ -200,9 +195,7 @@ _sandbox_rpc_recv_rights(int fd, void *buf, size_t len, int flags, int *fdp,
 	msghdr.msg_controllen = sizeof(cmsgbuf);
 
 	do {
-    fprintf(stderr, "_sandbox_rpc_recv_rights: waiting on recvmsg...\n");
 		retlen = recvmsg(fd, &msghdr, flags);
-    fprintf(stderr, "_sandbox_rpc_recv_rights: recvmsg done\n");
 	} while (retlen < 0 && errno == EINTR);
 
 	if (retlen < 0)

@@ -159,8 +159,6 @@ invoke(register_t op,
   __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
 #pragma clang diagnostic pop
   static int initialized = 0;
-  if (initialized)
-    fprintf_c(stderrfd, "invoke: op=%d\n", (int) op);
   /* reconstruct the cheri_objects */
   if (!initialized)
   {
@@ -173,14 +171,12 @@ invoke(register_t op,
       nflag = params->nflag;
       qflag = params->qflag;
       tflag = params->tflag;
-      fprintf_c(stderrfd, "in invoke(), initialized.\n");
       initialized = 1;
     }
   }
   else if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS ||
     op == GZSANDBOX_HELPER_OP_GZUNCOMPRESS)
   {
-      fprintf_c(stderrfd, "in invoke(), params is %p.\n", (void*)vparams);
     __capability struct gz_params * params = vparams;
     if (op == GZSANDBOX_HELPER_OP_GZCOMPRESS)
       return gz_compress(
@@ -255,15 +251,12 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 #endif
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
-  fprintf_c(stderrfd, "inbufp: %p, outbufp: %p (note: &malloc: %p, &invoke: %p)\n", inbufp, outbufp, &malloc, &invoke);
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
 	}
 
-  fprintf_c(stderrfd, "memset\n");
 	memset(&z, 0, sizeof z);
-  fprintf_c(stderrfd, "memset done\n");
 	z.zalloc = Z_NULL;
 	z.zfree = Z_NULL;
 	z.opaque = 0;
@@ -273,22 +266,15 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 	i = sizeof header;
 #else
 	if (nflag != 0) {
-    fprintf_c(stderrfd, "nflag is non-zero\n");
     const char * noname = "";
 		mtime = 0;
 		origname = cheri_ptrperm((void*)noname, 1, CHERI_PERM_LOAD);
 	}
-  char c = *origname;
-  fprintf_c(stderrfd, "c: %c\n", c);
-  fprintf_c(stderrfd, "test: BUFLEN=%d\n", (int)BUFLEN);
-  fprintf_c(stderrfd, "origname: b=%lx, o=%lx, l=%lu, ptr=%p\n", cheri_getbase((__capability void*)origname), cheri_getoffset((__capability void*)origname), cheri_getlen((__capability void*)origname), (void*)origname);
 
   /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
   if (BUFLEN >= 10)
   {
-  fprintf_c(stderrfd, "set outbufp\n");
     outbufp[0] = GZIP_MAGIC0;
-  fprintf_c(stderrfd, "set outbufp again\n");
     outbufp[1] = GZIP_MAGIC1;
     outbufp[2] = Z_DEFLATED;
     outbufp[3] = *origname ? ORIG_NAME : 0;
@@ -298,7 +284,6 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
     outbufp[7] = (mtime >> 24) & 0xff;
     outbufp[8] = numflag == 1 ? 4 : numflag == 9 ? 2 : 0;
     outbufp[9] = OS_CODE;
-    fprintf_c(stderrfd, "doing an fprintf_c\n");
     /* XXX: can't now convert origname into a pointer and use legacy MIPS load/store, because it's not within $c0 */
     /*i = 10+snprintf(&outbufp[10], BUFLEN-10, "%s", (void*)origname);*/
     size_t len = strlen_c(origname);
@@ -312,7 +297,6 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
   {
     i = 0;
   }
-  fprintf_c(stderrfd, "i: %d\n", (int) i);
 
 	/*i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c%c%c%s", 
 		     GZIP_MAGIC0, GZIP_MAGIC1, Z_DEFLATED,
@@ -336,7 +320,6 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 
 	error = deflateInit2(&z, numflag, Z_DEFLATED,
 			     (-MAX_WBITS), 8, Z_DEFAULT_STRATEGY);
-  fprintf_c(stderrfd, "error: %d\n", (int) error);
 	if (error != Z_OK) {
 		maybe_warnx("deflateInit2 failed");
 		in_tot = -1;

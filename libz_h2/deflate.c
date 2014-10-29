@@ -664,7 +664,7 @@ local void flush_pending(strm)
     if (len == 0) return;
 
     /* XXX CHERI: cmemcpy for sandbox */
-    zmemcpy_c_tocap(strm->next_out, s->pending_out, len);
+    /*zmemcpy_c_tocap*/bufcpy_c_tocap(strm->next_out, s->pending_out, len);
     strm->next_out  += len;
     s->pending_out  += len;
     strm->total_out += len;
@@ -1100,7 +1100,7 @@ local int read_buf(strm, buf, size)
     strm->avail_in  -= len;
 
     /* XXX: fails because buf doesn't have PERM_LOAD_CAP but libc/mips/string/memcpy_c.s:copy_caps tries to clc/csc */
-    zmemcpy_c_fromcap(buf, strm->next_in, len);
+    /*zmemcpy_c_fromcap*/bufcpy_c_fromcap(buf, strm->next_in, len);
     if (strm->state->wrap == 1) {
         strm->adler = adler32(strm->adler, buf, len);
     }
