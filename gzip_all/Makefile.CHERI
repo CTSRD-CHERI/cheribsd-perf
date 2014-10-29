@@ -1,16 +1,20 @@
 .include "../cheridefs.mk"
 
-LDADD=		../libz_u/libz.a
 CFLAGS+=-DNO_XZ_SUPPORT -DNO_BZIP2_SUPPORT
 
 GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\"
 GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/
 GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI 
+GZIP_U_LIBZ_H_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"h\" -I../libz_h2/
 
 GZIP_U_LDADD=../libz_u/libz.a
 GZIP_A_LDADD=../libz_u/libz.a ../libsep/libsep.a
 GZIP_H_LDADD=../libcheri_u/libcheri.a
 GZIP_H_HELPER_LDADD=../libz_u/libz.a ../libc_cheri_u/libc_cheri.a
+GZIP_U_LIBZ_H_LDADD=../libz_h2/libzwrapper.a
+
+all: gzip_u gzip_a gzip_h gzip_u_libz_h
+		echo done
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o
@@ -20,6 +24,9 @@ gzip_a.o:
 
 gzip_h.o:
 		$(CC) $(CFLAGS) $(GZIP_H_CFLAGS) -c gzip.c -o gzip_h.o
+
+gzip_u_libz_h.o:
+		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H_CFLAGS) -c gzip.c -o gzip_u_libz_h.o
 
 gzsandbox_a.o:
 		$(CC) $(CFLAGS) $(GZIP_A_CFLAGS) -c gzsandbox_a.c -o gzsandbox_a.o
@@ -41,8 +48,8 @@ gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o
 		$(CC) $(CFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib -o gzsandbox-helper_h gzsandbox-helper_h.o $(GZIP_H_HELPER_LDADD)
 		$(OBJCOPY) -S -O binary gzsandbox-helper_h gzsandbox-helper_h.bin
 
-all: gzip_u gzip_a gzip_h
-		echo done
+gzip_u_libz_h: gzip_u_libz_h.o
+		$(CC) $(CFLAGS) -o gzip_u_libz_h gzip_u_libz_h.o $(GZIP_U_LIBZ_H_LDADD)
 
 clean:
 		rm -f *.o gzip gzip_u gzip_a gzip_h
@@ -51,4 +58,6 @@ push:
 		$(CHERI_PUSH) gzip_u gzip_u
 		$(CHERI_PUSH) gzip_a gzip_a
 		$(CHERI_PUSH) gzip_h gzip_h
+		$(CHERI_PUSH) gzip_u_libz_h gzip_u_libz_h
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin lzsandbox-helper.bin
 		$(CHERI_PUSH) gzsandbox-helper_h.bin gzsandbox-helper_h.bin
