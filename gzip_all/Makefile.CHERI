@@ -41,11 +41,14 @@ gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o
 		$(CC) $(CFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib -o gzsandbox-helper_h gzsandbox-helper_h.o $(GZIP_H_HELPER_LDADD)
 		$(OBJCOPY) -S -O binary gzsandbox-helper_h gzsandbox-helper_h.bin
 
-all:
-		echo $(GZIPU_OBJS)
+all: gzip_u gzip_a gzip_h
+		echo done
 
 clean:
 		rm -f *.o gzip gzip_u gzip_a gzip_h
 
 push:
-		$(CHERI_PUSH) gzip gzip_u
+		$(CHERI_PUSH) gzip_u gzip_u
+		$(CHERI_PUSH) gzip_a gzip_a
+		$(CHERI_PUSH) gzip_h gzip_h
+		$(CHERI_PUSH) gzsandbox-helper_h.bin gzsandbox-helper_h.bin
