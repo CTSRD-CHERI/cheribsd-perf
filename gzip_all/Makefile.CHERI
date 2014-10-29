@@ -16,6 +16,59 @@ GZIP_U_LIBZ_H_LDADD=../libz_h2/libzwrapper.a
 all: gzip_u gzip_a gzip_h gzip_u_libz_h
 		echo done
 
+everything: clean clean-dep dep all push
+
+dep: libz_u libz_h2 libcheri_u libc_cheri_u libsep
+		echo done
+
+clean-dep: clean-libz_u clean-libz_h2 clean-libcheri_u clean-libc_cheri_u clean-libsep
+		echo done
+
+libz_u:
+		cd ../libz_u && \
+		$(MAKE) -f Makefile.CHERI all
+
+clean-libz_u:
+		cd ../libz_u && \
+		$(MAKE) -f Makefile.CHERI clean
+
+libz_h2:
+		cd ../libz_h2 && \
+		$(MAKE) -f Makefile.CHERI all && \
+		$(MAKE) -f Makefile-wrapper.CHERI all && \
+		$(MAKE) -f Makefile-helper.CHERI all
+
+clean-libz_h2:
+		cd ../libz_h2 && \
+		$(MAKE) -f Makefile.CHERI clean && \
+		$(MAKE) -f Makefile-wrapper.CHERI clean && \
+		$(MAKE) -f Makefile-helper.CHERI clean
+
+libsep:
+		cd ../libsep && \
+		$(MAKE) -f Makefile.CHERI all
+
+clean-libsep:
+		cd ../libsep && \
+		$(MAKE) -f Makefile.CHERI clean
+
+libcheri_u:
+		cd ../libcheri_u && \
+		$(MAKE) -f Makefile.CHERI all
+
+clean-libcheri_u:
+		cd ../libcheri_u && \
+		$(MAKE) -f Makefile.CHERI clean
+
+libc_cheri_u:
+		cd ../libc_cheri_u && \
+		touch cheri_invoke.So && \
+		$(MAKE) -f Makefile.CHERI all
+
+clean-libc_cheri_u:
+		cd ../libc_cheri_u && \
+		$(MAKE) -f Makefile.CHERI clean
+
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o
 
@@ -52,12 +105,12 @@ gzip_u_libz_h: gzip_u_libz_h.o
 		$(CC) $(CFLAGS) -o gzip_u_libz_h gzip_u_libz_h.o $(GZIP_U_LIBZ_H_LDADD)
 
 clean:
-		rm -f *.o gzip gzip_u gzip_a gzip_h
+		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzsandbox-helper_h gzsandbox-helper_h.bin
 
 push:
-		$(CHERI_PUSH) gzip_u gzip_u
-		$(CHERI_PUSH) gzip_a gzip_a
-		$(CHERI_PUSH) gzip_h gzip_h
-		$(CHERI_PUSH) gzip_u_libz_h gzip_u_libz_h
-		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin lzsandbox-helper.bin
-		$(CHERI_PUSH) gzsandbox-helper_h.bin gzsandbox-helper_h.bin
+		$(CHERI_PUSH) gzip_u $(CHERI_PUSH_DIR)/gzip_u
+		$(CHERI_PUSH) gzip_a $(CHERI_PUSH_DIR)/gzip_a
+		$(CHERI_PUSH) gzip_h $(CHERI_PUSH_DIR)/gzip_h
+		$(CHERI_PUSH) gzip_u_libz_h $(CHERI_PUSH_DIR)/gzip_u_libz_h
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin $(CHERI_PUSH_DIR)/lzsandbox-helper.bin
+		$(CHERI_PUSH) gzsandbox-helper_h.bin $(CHERI_PUSH_DIR)/gzsandbox-helper_h.bin

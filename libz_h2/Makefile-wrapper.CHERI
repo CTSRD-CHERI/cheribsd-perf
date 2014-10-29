@@ -17,6 +17,6 @@ all: zwrapper.o
 	$(AR) -r lib$(LIB).a zwrapper.o tmpdir/*.o
 
 clean:
-	rm -f zwrapper.o lib$(LIB).a
+	rm -f zwrapper.o lib$(LIB).a *.so *.o *.so.1
 	rm -rf tmpdir
 

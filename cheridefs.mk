@@ -11,9 +11,11 @@ OBJCOPY:=$(CHERI_SDK)/bin/objcopy
 GIT_COMMIT_STRING!=git log | grep commit | head -n 1 | cut -d" " -f2 | sed s/^/\\\\\"/ | sed s/$$/\\\\\"/
 CFLAGS+=--sysroot=$(CHERI_SYSROOT) -DGIT_COMMIT_STRING=$(GIT_COMMIT_STRING)
 CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
+CFLAGS+=-O2
 
 CHERI_SSH_HOST:=oregano
 CHERI_PUSH=/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8888
+CHERI_PUSH_DIR=/mnt
 
 MACHINE_ARCH=mips64
 MACHINE=mips
