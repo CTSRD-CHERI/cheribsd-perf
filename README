@@ -45,7 +45,7 @@ BUILDING
 ===============
 
 It should be sufficient to modify only cheridefs.mk to point to the
-CHERI SDK built using build_sdk.sh.
+CHERI SDK built using build_sdk.sh, and the CheriBSD sources (which libc_cheri depends on).
 
 The gzip_all Makefile does everything: cleaning and building the
 various library dependencies (libz, libsep, libcheri, libc_cheri),
