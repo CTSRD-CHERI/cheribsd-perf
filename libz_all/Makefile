@@ -2,9 +2,9 @@
 
 .include "../cheridefs.mk"
 
-LIB=z
-SHLIB_MAJOR=1
-USE_CHERI=yes
+LIBZ_U_CFLAGS=
+LIBZ_A_CFLAGS=-DSB_LIBZ_CAPSICUM -DLIBZ_INCL_LIB
+
 OBJS+=		adler32.o
 OBJS+=		compress.o
 OBJS+=		crc32.o
@@ -22,9 +22,23 @@ OBJS+=		uncompr.o
 OBJS+=		zopen.o
 OBJS+=		zutil.o
 
-all: $(OBJS)
-	$(AR) -r libz.a $(OBJS)
+OBJS_U=$(OBJS:S/.o/_u.o/g)
+OBJS_A=$(OBJS:S/.o/_a.o/g)
+
+.SUFFIXES: .c _u.o _a.o
+
+.c_u.o:
+	$(CC) $(CFLAGS) $(LIBZ_U_CFLAGS) -c $< -o $@
+
+.c_a.o:
+	$(CC) $(CFLAGS) $(LIBZ_A_CFLAGS) -c $< -o $@
+
+libz_u.a: $(OBJS_U)
+	$(AR) -r libz_u.a $(OBJS_U)
+
+libz_a.a: $(OBJS_A)
+	$(AR) -r libz_a.a $(OBJS_A)
 
 clean:
-	rm -f lib$(LIB).a *.so *.o *.so.1 *.So *.po *.a *.gz
+	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz
 
