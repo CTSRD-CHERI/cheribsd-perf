@@ -242,8 +242,13 @@ ZEXTERN int ZEXPORT deflateInit OF((z_streamp strm, int level));
    this will be done by deflate().
 */
 
-
+#if defined(SB_LIBZ_CAPSICUM)
+ZEXTERN int ZEXPORT zlib_deflate OF((z_streamp strm, int flush));
+extern int deflate_wrapper (z_streamp strm, int flush);
+#define deflate deflate_wrapper
+#else /* SB_LIBZ_CAPSICUM */
 ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
+#endif /* SB_LIBZ_CAPSICUM */
 /*
     deflate compresses as much data as possible, and stops when the input
   buffer becomes empty or the output buffer becomes full.  It may introduce

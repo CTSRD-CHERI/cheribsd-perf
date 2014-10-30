@@ -512,7 +512,11 @@ int ZEXPORT deflateParams(strm, level, strategy)
     if ((strategy != s->strategy || func != configuration_table[level].func) &&
         strm->total_in != 0) {
         /* Flush the last buffer: */
+#if defined(SB_LIBZ_CAPSICUM)
+        err = zlib_deflate(strm, Z_BLOCK);
+#else /* SB_LIBZ_CAPSICUM */
         err = deflate(strm, Z_BLOCK);
+#endif /* SB_LIBZ_CAPSICUM */
         if (err == Z_BUF_ERROR && s->pending == 0)
             err = Z_OK;
     }
@@ -662,7 +666,11 @@ local void flush_pending(strm)
 }
 
 /* ========================================================================= */
+#if defined(SB_LIBZ_CAPSICUM)
+int ZEXPORT zlib_deflate (strm, flush)
+#else /* SB_LIBZ_CAPSICUM */
 int ZEXPORT deflate (strm, flush)
+#endif /* SB_LIBZ_CAPSICUM */
     z_streamp strm;
     int flush;
 {

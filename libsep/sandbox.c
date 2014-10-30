@@ -84,7 +84,6 @@ sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), vo
       perror("cap_enter");
       _Exit(1);
     }
-    /* TODO: limit fd_host_end? */
     close(scb->fd_host_end);
     int rc = sandbox_mainfn(context);
     _Exit(rc);
@@ -421,6 +420,16 @@ host_rpc_rights_fix(struct host_rpc_params * params)
 }
 
 int
+host_rpc_fix(struct host_rpc_params * params)
+{
+  params->req_fdp = NULL;
+  params->req_fdcount = 0;
+  params->rep_fdp = NULL;
+  params->rep_fdcountp = NULL;
+	return host_rpc_internal_fix(params);
+}
+
+int
 host_recvrpc(struct sandbox_cb *scb, u_int32_t *opnop, u_int32_t *seqnop,
 	u_char **bufferp, size_t *lenp)
 {
@@ -557,6 +566,7 @@ sandbox_recvrpc_internal(struct sandbox_cb *scb, u_int32_t *opnop,
 	*bufferp = buffer;
 	*lenp = totlen;
 	*opnop = req_hdr.sandboxrpc_reqhdr_opno;
+  printf("opno: %d\n", *opnop);
 	*seqnop = req_hdr.sandboxrpc_reqhdr_seqno;
 	return (0);
 }

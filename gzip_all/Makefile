@@ -2,16 +2,21 @@
 
 CFLAGS+=-DNO_XZ_SUPPORT -DNO_BZIP2_SUPPORT
 
-GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\" -I../libz_u/
-GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/ -I../libz_u/
-GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI  -I../libz_u/
+GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\" -I../libz_all/
+GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/ -I../libz_all/
+GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI  -I../libz_all/
 GZIP_U_LIBZ_H_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"h\" -I../libz_h2/
+GZIP_U_LIBZ_A_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"a\" -I../libz_all/
 
-GZIP_U_LDADD=../libz_u/libz.a
-GZIP_A_LDADD=../libz_u/libz.a ../libsep/libsep.a
+# Hmm, not completely unmodified then
+GZIP_U_LIBZ_A_CFLAGS+=-DSB_LIBZ_CAPSICUM
+
+GZIP_U_LDADD=../libz_all/libz_u.a
+GZIP_A_LDADD=../libz_all/libz_u.a ../libsep/libsep.a
 GZIP_H_LDADD=../libcheri_u/libcheri.a
-GZIP_H_HELPER_LDADD=../libz_u/libz.a ../libc_cheri_u/libc_cheri.a
+GZIP_H_HELPER_LDADD=../libz_all/libz_u.a ../libc_cheri_u/libc_cheri.a
 GZIP_U_LIBZ_H_LDADD=../libz_h2/libzwrapper.a
+GZIP_U_LIBZ_A_LDADD=../libz_all/libz_a.a
 
 all: dep progs
 		echo done
@@ -19,24 +24,32 @@ all: dep progs
 clean: clean-dep clean-progs
 		echo done
 
-progs: gzip_u gzip_a gzip_h gzip_u_libz_h
+progs: gzip_u gzip_a gzip_h gzip_u_libz_h gzip_u_libz_a
 		echo done
 
 everything: clean all push
 
-dep: libz_u libcheri_u libc_cheri_u libsep libz_h2
+dep: libsep libz_u libz_a libcheri_u libc_cheri_u libz_h2
 		echo done
 
-clean-dep: clean-libz_u clean-libz_h2 clean-libcheri_u clean-libc_cheri_u clean-libsep
+clean-dep: clean-libsep clean-libz_u clean-libz_a clean-libz_h2 clean-libcheri_u clean-libc_cheri_u
 		echo done
 
 libz_u:
-		cd ../libz_u && \
-		$(MAKE) -f Makefile-libz.CHERI all
+		cd ../libz_all && \
+		$(MAKE) libz_u.a
 
 clean-libz_u:
-		cd ../libz_u && \
-		$(MAKE) -f Makefile-libz.CHERI clean
+		cd ../libz_all && \
+		$(MAKE) clean
+
+libz_a:
+		cd ../libz_all && \
+		$(MAKE) libz_a.a
+
+clean-libz_a:
+		cd ../libz_all && \
+		$(MAKE) clean
 
 libz_h2:
 		cd ../libz_h2 && \
@@ -87,6 +100,9 @@ gzip_h.o:
 gzip_u_libz_h.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H_CFLAGS) -c gzip.c -o gzip_u_libz_h.o
 
+gzip_u_libz_a.o:
+		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_A_CFLAGS) -c gzip.c -o gzip_u_libz_a.o
+
 gzsandbox_a.o:
 		$(CC) $(CFLAGS) $(GZIP_A_CFLAGS) -c gzsandbox_a.c -o gzsandbox_a.o
 
@@ -110,14 +126,18 @@ gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o libz_u libcheri_u libc_cheri
 gzip_u_libz_h: gzip_u_libz_h.o libz_h2
 		$(CC) $(CFLAGS) -o gzip_u_libz_h gzip_u_libz_h.o $(GZIP_U_LIBZ_H_LDADD)
 
+gzip_u_libz_a: gzip_u_libz_a.o libz_a
+		$(CC) $(CFLAGS) -o gzip_u_libz_a gzip_u_libz_a.o $(GZIP_U_LIBZ_A_LDADD)
+
 clean-progs:
-		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzsandbox-helper_h gzsandbox-helper_h.bin
+		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzip_u_libz_a gzsandbox-helper_h gzsandbox-helper_h.bin
 
 push:
 		$(CHERI_PUSH) gzip_u $(CHERI_PUSH_DIR)/gzip_u
 		$(CHERI_PUSH) gzip_a $(CHERI_PUSH_DIR)/gzip_a
 		$(CHERI_PUSH) gzip_h $(CHERI_PUSH_DIR)/gzip_h
 		$(CHERI_PUSH) gzip_u_libz_h $(CHERI_PUSH_DIR)/gzip_u_libz_h
+		$(CHERI_PUSH) gzip_u_libz_a $(CHERI_PUSH_DIR)/gzip_u_libz_a
 		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin $(CHERI_PUSH_DIR)/lzsandbox-helper.bin
 		$(CHERI_PUSH) gzsandbox-helper_h.bin $(CHERI_PUSH_DIR)/gzsandbox-helper_h.bin
 		$(CHERI_PUSH) test.sh $(CHERI_PUSH_DIR)/test.sh

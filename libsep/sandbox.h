@@ -53,6 +53,7 @@ struct host_rpc_params
   int *rep_fdp;
   int *rep_fdcountp;
 };
+int host_rpc_fix(struct host_rpc_params * params);
 int host_rpc_rights_fix(struct host_rpc_params * params);
 
 /* Prototypes */
