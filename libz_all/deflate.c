@@ -210,7 +210,13 @@ int ZEXPORT deflateInit_(strm, level, version, stream_size)
 }
 
 /* ========================================================================= */
-int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+#if defined(SB_LIBZ_CAPSICUM)
+int ZEXPORT zlib_deflateInit2_
+#define deflateInit2_ deflateInit2_wrapper
+#else /* SB_LIBZ_CAPSICUM */
+int ZEXPORT deflateInit2_
+#endif /* SB_LIBZ_CAPSICUM */
+  (strm, level, method, windowBits, memLevel, strategy,
                   version, stream_size)
     z_streamp strm;
     int  level;
@@ -984,7 +990,11 @@ int ZEXPORT deflate (strm, flush)
 }
 
 /* ========================================================================= */
+#if defined(SB_LIBZ_CAPSICUM)
+int ZEXPORT zlib_deflateEnd (strm)
+#else /* SB_LIBZ_CAPSICUM */
 int ZEXPORT deflateEnd (strm)
+#endif /* SB_LIBZ_CAPSICUM */
     z_streamp strm;
 {
     int status;

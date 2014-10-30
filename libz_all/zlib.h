@@ -355,7 +355,13 @@ ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
 */
 
 
+#if defined(SB_LIBZ_CAPSICUM)
+ZEXTERN int ZEXPORT zlib_deflateEnd OF((z_streamp strm));
+extern int deflateEnd_wrapper (z_streamp strm);
+#define deflateEnd deflateEnd_wrapper
+#else /* SB_LIBZ_CAPSICUM */
 ZEXTERN int ZEXPORT deflateEnd OF((z_streamp strm));
+#endif /* SB_LIBZ_CAPSICUM */
 /*
      All dynamically allocated data structures for this stream are freed.
    This function discards any unprocessed input and does not flush any pending
@@ -1639,7 +1645,16 @@ ZEXTERN int ZEXPORT deflateInit_ OF((z_streamp strm, int level,
                                      const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateInit_ OF((z_streamp strm,
                                      const char *version, int stream_size));
-ZEXTERN int ZEXPORT deflateInit2_ OF((z_streamp strm, int  level, int  method,
+#if defined(SB_LIBZ_CAPSICUM)
+extern int deflateInit2_wrapper (z_streamp strm, int level,
+  int method, int windowBits, int memLevel, int strategy,
+  const char *version, int stream_size);
+#define deflateInit2_ deflateInit2_wrapper
+ZEXTERN int ZEXPORT zlib_deflateInit2_
+#else /* SB_LIBZ_CAPSICUM */
+ZEXTERN int ZEXPORT deflateInit2_
+#endif /* SB_LIBZ_CAPSICUM */
+                                  OF((z_streamp strm, int  level, int  method,
                                       int windowBits, int memLevel,
                                       int strategy, const char *version,
                                       int stream_size));

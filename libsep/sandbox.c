@@ -366,7 +366,8 @@ host_rpc_internal_fix(struct host_rpc_params * params)
 		while (totlen < rep_hdr.sandboxrpc_rephdr_datalen) {
 			space = rep[i].iov_len - off;
 			left = rep_hdr.sandboxrpc_rephdr_datalen - totlen;
-			want = (space > left) ? space : left;
+			//want = (space > left) ? space : left;
+			want = (left < space) ? left : space;
 			len = _sandbox_rpc_recv(scb->fd_host_end,
 			    (u_char *)((uintptr_t)rep[i].iov_base + off),
 			    want, MSG_WAITALL);
@@ -566,7 +567,6 @@ sandbox_recvrpc_internal(struct sandbox_cb *scb, u_int32_t *opnop,
 	*bufferp = buffer;
 	*lenp = totlen;
 	*opnop = req_hdr.sandboxrpc_reqhdr_opno;
-  printf("opno: %d\n", *opnop);
 	*seqnop = req_hdr.sandboxrpc_reqhdr_seqno;
 	return (0);
 }

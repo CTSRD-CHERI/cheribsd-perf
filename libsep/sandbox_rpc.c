@@ -8,6 +8,40 @@
 
 #include "sandbox_rpc.h"
 
+#define SEND_MAX (SO_SNDBUF/2)
+
+static ssize_t
+send_everything(int fd, const void *buf, size_t len, int flags)
+{
+  ssize_t retlen, totlen = 0;
+  while (len)
+  {
+    retlen = send(fd, buf, len < SEND_MAX ? len : SEND_MAX, flags);
+    if (retlen < 0 && errno == EINTR) continue;
+    if (retlen < 0) return retlen;
+    len -= retlen;
+    buf += retlen;
+    totlen += retlen;
+  }
+  return totlen;
+}
+
+static ssize_t
+recv_everything(int fd, void *buf, size_t len, int flags)
+{
+  ssize_t retlen, totlen = 0;
+  while (len)
+  {
+    retlen = recv(fd, buf, len < SEND_MAX ? len : SEND_MAX, flags);
+    if (retlen < 0 && errno == EINTR) continue;
+    if (retlen <= 0) return retlen;
+    len -= retlen;
+    buf += retlen;
+    totlen += retlen;
+  }
+  return totlen;
+}
+
 void
 _sandbox_dispose_rights(int *fdp, int fdcount)
 {
@@ -91,7 +125,7 @@ _sandbox_rpc_send(int fd, const void *msg, size_t len, int flags)
 	}
 
 	do {
-		retlen = send(fd, msg, len, flags);
+		retlen = send_everything(fd, msg, len, flags);
 	} while (retlen < 0 && errno == EINTR);
 
 	return (retlen);
@@ -154,7 +188,7 @@ _sandbox_rpc_recv(int fd, void *buf, size_t len, int flags)
 	}
 
 	do {
-		retlen = recv(fd, buf, len, flags);
+		retlen = recv_everything(fd, buf, len, flags);
 	} while (retlen < 0 && errno == EINTR);
 
 	return (retlen);
