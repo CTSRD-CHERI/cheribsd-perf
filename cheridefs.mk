@@ -14,7 +14,11 @@ CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 CFLAGS+=-O2
 
 CHERI_SSH_HOST:=oregano
+
+# CHERI_PUSH is intended to be used in the form
+# $(CHERI_PUSH) local_file $(CHERI_PUSH_DIR)/remote_file
 CHERI_PUSH=/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8888
+
 CHERI_PUSH_DIR=/mnt
 
 MACHINE_ARCH=mips64
