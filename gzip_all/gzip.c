@@ -73,6 +73,14 @@ __FBSDID("$FreeBSD$");
 #include "gzip.h"
 #endif /* SB_GZIP_LIBCHERI */
 
+#if defined(ZLIB_CAP_ONLY)
+#define MAYBE_MAKE_CAP(x) ((__capability void *)(x))
+#define MAYBE_MAKE_PTR(x) ((void *)(x))
+#else /* ZLIB_CAP_ONLY */
+#define MAYBE_MAKE_CAP(x) (x)
+#define MAYBE_MAKE_PTR(x) (x)
+#endif /* ZLIB_CAP_ONLY */
+
 /* what type of file are we dealing with */
 enum filetype {
 	FT_GZIP,
@@ -660,10 +668,10 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 		i++;
 #endif
 
-	z.next_out = (unsigned char *)outbufp + i;
+	z.next_out = MAYBE_MAKE_CAP((unsigned char *)outbufp + i);
 	z.avail_out = BUFLEN - i;
 
-	error = deflateInit2(&z, numflag, Z_DEFLATED,
+	error = deflateInit2(MAYBE_MAKE_CAP(&z), numflag, Z_DEFLATED,
 			     (-MAX_WBITS), 8, Z_DEFAULT_STRATEGY);
 	if (error != Z_OK) {
 		maybe_warnx("deflateInit2 failed");
@@ -683,7 +691,7 @@ struct timeval before, after, diff, total;
 			}
 
 			out_tot += BUFLEN;
-			z.next_out = (unsigned char *)outbufp;
+			z.next_out = MAYBE_MAKE_CAP((unsigned char *)outbufp);
 			z.avail_out = BUFLEN;
 		}
 
@@ -699,12 +707,11 @@ struct timeval before, after, diff, total;
 
 			crc = crc32(crc, (const Bytef *)inbufp, (unsigned)in_size);
 			in_tot += in_size;
-			z.next_in = (unsigned char *)inbufp;
+			z.next_in = MAYBE_MAKE_CAP((unsigned char *)inbufp);
 			z.avail_in = in_size;
 		}
 
-//gettimeofday(&before, NULL);
-		error = deflate(&z, Z_NO_FLUSH);
+		error = deflate(MAYBE_MAKE_CAP(&z), Z_NO_FLUSH);
 		if (error != Z_OK && error != Z_STREAM_END) {
 			maybe_warnx("deflate failed");
 			in_tot = -1;
@@ -717,7 +724,7 @@ struct timeval before, after, diff, total;
 		size_t len;
 		ssize_t w;
 
-		error = deflate(&z, Z_FINISH);
+		error = deflate(MAYBE_MAKE_CAP(&z), Z_FINISH);
 		if (error != Z_OK && error != Z_STREAM_END) {
 			maybe_warnx("deflate failed");
 			in_tot = -1;
@@ -733,14 +740,14 @@ struct timeval before, after, diff, total;
 			goto out;
 		}
 		out_tot += len;
-		z.next_out = (unsigned char *)outbufp;
+		z.next_out = MAYBE_MAKE_CAP((unsigned char *)outbufp);
 		z.avail_out = BUFLEN;
 
 		if (error == Z_STREAM_END)
 			break;
 	}
 
-	if (deflateEnd(&z) != Z_OK) {
+	if (deflateEnd(MAYBE_MAKE_CAP(&z)) != Z_OK) {
 		maybe_warnx("deflateEnd failed");
 		in_tot = -1;
 		goto out;
@@ -844,9 +851,9 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 
 	memset(&z, 0, sizeof z);
 	z.avail_in = prelen;
-	z.next_in = (unsigned char *)pre;
+	z.next_in = MAYBE_MAKE_CAP((unsigned char *)pre);
 	z.avail_out = BUFLEN;
-	z.next_out = (unsigned char *)outbufp;
+	z.next_out = MAYBE_MAKE_CAP((unsigned char *)outbufp);
 	z.zalloc = NULL;
 	z.zfree = NULL;
 	z.opaque = 0;
@@ -859,10 +866,10 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 			ssize_t in_size;
 
 			if (z.avail_in > 0) {
-				memmove(inbufp, z.next_in, z.avail_in);
+				memmove(inbufp, MAYBE_MAKE_PTR(z.next_in), z.avail_in);
 			}
-			z.next_in = (unsigned char *)inbufp;
-			in_size = read(in, z.next_in + z.avail_in,
+			z.next_in = MAYBE_MAKE_CAP((unsigned char *)inbufp);
+			in_size = read(in, MAYBE_MAKE_PTR(z.next_in) + z.avail_in,
 			    BUFLEN - z.avail_in);
 
 			if (in_size == -1) {
@@ -997,7 +1004,7 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 			break;
 
 		case GZSTATE_INIT:
-			if (inflateInit2(&z, -MAX_WBITS) != Z_OK) {
+			if (inflateInit2(MAYBE_MAKE_CAP(&z), -MAX_WBITS) != Z_OK) {
 				maybe_warnx("failed to inflateInit");
 				goto stop_and_fail;
 			}
@@ -1005,7 +1012,7 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 			break;
 
 		case GZSTATE_READ:
-			error = inflate(&z, Z_FINISH);
+			error = inflate(MAYBE_MAKE_CAP(&z), Z_FINISH);
 			switch (error) {
 			/* Z_BUF_ERROR goes with Z_FINISH... */
 			case Z_BUF_ERROR:
@@ -1052,11 +1059,11 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 			}
 
 			if (error == Z_STREAM_END) {
-				inflateEnd(&z);
+				inflateEnd(MAYBE_MAKE_CAP(&z));
 				state++;
 			}
 
-			z.next_out = (unsigned char *)outbufp;
+			z.next_out = MAYBE_MAKE_CAP((unsigned char *)outbufp);
 			z.avail_out = BUFLEN;
 
 			break;
@@ -1132,7 +1139,7 @@ stop:
 		break;
 	}
 	if (state > GZSTATE_INIT)
-		inflateEnd(&z);
+		inflateEnd(MAYBE_MAKE_CAP(&z));
 
 	free(inbufp);
 out1:

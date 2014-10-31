@@ -32,9 +32,10 @@
 #define ZLIB_H
 
 #if !defined(ZLIB_INCL_SANDBOX) && \
-    !defined(ZLIB_INCL_WRAPPER)
+    !defined(ZLIB_INCL_WRAPPER) && \
+    !defined(ZLIB_CAP_ONLY)
 #define ZLIB_INCL_APP
-#endif /* !ZLIB_INCL_SANDBOX && !ZLIB_INCL_WRAPPER */
+#endif /* !ZLIB_INCL_SANDBOX && !ZLIB_INCL_WRAPPER && !ZLIB_CAP_ONLY */
 
 #include <machine/cheri.h>
 #include <cheri/sandbox.h>
@@ -99,6 +100,8 @@ typedef struct z_stream_s {
 #elif defined(ZLIB_INCL_WRAPPER)
     z_const Bytef *next_in_p;
     __capability z_const Bytef *next_in_c;
+#elif defined(ZLIB_CAP_ONLY)
+    __capability z_const Bytef *next_in;
 #endif
     uInt     avail_in;  /* number of bytes available at next_in */
     uLong    total_in;  /* total number of input bytes read so far */
@@ -112,6 +115,8 @@ typedef struct z_stream_s {
 #elif defined(ZLIB_INCL_WRAPPER)
     Bytef *next_out_p;
     __capability Bytef *next_out_c;
+#elif defined(ZLIB_CAP_ONLY)
+    __capability Bytef *next_out;
 #endif
     uInt     avail_out; /* remaining free space at next_out */
     uLong    total_out; /* total number of bytes output so far */
@@ -132,12 +137,10 @@ typedef struct z_stream_s {
 } z_stream;
 
 /* XXX: it's not nice, but it makes things work */
-#if defined(ZLIB_INCL_APP)
+#if defined(ZLIB_INCL_APP) || defined(ZLIB_INCL_WRAPPER)
 typedef z_stream FAR *z_streamp;
-#elif defined(ZLIB_INCL_SANDBOX)
+#elif defined(ZLIB_INCL_SANDBOX) || defined(ZLIB_CAP_ONLY)
 typedef __capability z_stream FAR *z_streamp;
-#elif defined(ZLIB_INCL_WRAPPER)
-typedef z_stream FAR *z_streamp;
 #endif
 typedef __capability z_stream FAR *z_streamp_c;
 
