@@ -17,7 +17,8 @@ CHERI_SSH_HOST:=oregano
 
 # CHERI_PUSH is intended to be used in the form
 # $(CHERI_PUSH) local_file $(CHERI_PUSH_DIR)/remote_file
-CHERI_PUSH=/home/mbv21/git-tmp/myncp/myproto 192.168.1.100 8888
+CHERI_PUSH=/home/mbv21/git-tmp/myncp/myncp 192.168.1.100 8888
+CHERI_PULL=/home/mbv21/git-tmp/myncp/myncp -1 8888
 
 CHERI_PUSH_DIR=/mnt
 

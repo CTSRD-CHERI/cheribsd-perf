@@ -148,6 +148,7 @@ gzip_u_libz_c: gzip_u_libz_c.o libz_c
 
 clean-progs:
 		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzip_u_libz_a gzip_u_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin
+		rm -rf results
 
 push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h push-gzip_u_libz_a push-gzip_u_libz_c push-test
 
@@ -173,4 +174,12 @@ push-gzip_u_libz_c:
 
 push-test:
 		$(CHERI_PUSH) test.sh $(CHERI_PUSH_DIR)/test.sh
+
+pull-results:
+		rm -rf results
+		mkdir results
+		cp post_process.sh results/
+		cd results && \
+		$(CHERI_PULL) && \
+		./post_process.sh
 
