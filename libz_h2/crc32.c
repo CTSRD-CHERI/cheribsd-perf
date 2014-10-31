@@ -206,7 +206,7 @@ unsigned long ZEXPORT crc32(crc, buf, len)
     const unsigned char FAR *buf;
     uInt len;
 {
-	return (crc32_c(crc, cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD),
+	return (crc32_c(crc, buf ? cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD) : buf,
 	    len));
 }
 

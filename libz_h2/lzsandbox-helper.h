@@ -36,8 +36,4 @@ struct lzparams
 
 int ef (const char * format, ...);
 
-void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len);
-__capability void * bufcpy_c_tocap (__capability void * dst, const void * src, size_t len);
-__capability void * bufcpy_c (__capability void * dst, __capability const void * src, size_t len);
-
 #endif /* !_LZSANDBOX_HELPER_H_ */

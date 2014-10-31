@@ -19,7 +19,7 @@ GZIP_H_LDADD=../libcheri_u/libcheri.a
 GZIP_H_HELPER_LDADD=../libz_all/libz_u.a ../libc_cheri_u/libc_cheri.a
 GZIP_U_LIBZ_H_LDADD=../libz_h2/libzwrapper.a
 GZIP_U_LIBZ_A_LDADD=../libz_all/libz_a.a
-GZIP_U_LIBZ_C_LDADD=../libz_h2/libz.a
+GZIP_U_LIBZ_C_LDADD=../libz_h2/libz_c.a
 
 all: dep progs
 		echo done
@@ -32,10 +32,10 @@ progs: gzip_u gzip_a gzip_h gzip_u_libz_h gzip_u_libz_a gzip_u_libz_c
 
 everything: clean all push
 
-dep: libsep libz_u libz_a libcheri_u libc_cheri_u libz_h2
+dep: libsep libz_u libz_a libcheri_u libc_cheri_u libz_h2 libz_c
 		echo done
 
-clean-dep: clean-libsep clean-libz_u clean-libz_a clean-libz_h2 clean-libcheri_u clean-libc_cheri_u
+clean-dep: clean-libsep clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c clean-libcheri_u clean-libc_cheri_u
 		echo done
 
 libz_u:
@@ -56,15 +56,23 @@ clean-libz_a:
 
 libz_h2:
 		cd ../libz_h2 && \
-		$(MAKE) -f Makefile-libz.CHERI all && \
+		$(MAKE) -f Makefile-libz.CHERI libz_h.a && \
 		$(MAKE) -f Makefile-wrapper.CHERI all && \
 		$(MAKE) -f Makefile-helper.CHERI all
+
+libz_c:
+		cd ../libz_h2 && \
+		$(MAKE) -f Makefile-libz.CHERI libz_c.a
 
 clean-libz_h2:
 		cd ../libz_h2 && \
 		$(MAKE) -f Makefile-libz.CHERI clean && \
 		$(MAKE) -f Makefile-wrapper.CHERI clean && \
 		$(MAKE) -f Makefile-helper.CHERI clean
+
+clean-libz_c:
+		cd ../libz_h2 && \
+		$(MAKE) -f Makefile-libz.CHERI clean
 
 libsep:
 		cd ../libsep && \
@@ -135,7 +143,7 @@ gzip_u_libz_h: gzip_u_libz_h.o libz_h2
 gzip_u_libz_a: gzip_u_libz_a.o libz_a
 		$(CC) $(CFLAGS) -o gzip_u_libz_a gzip_u_libz_a.o $(GZIP_U_LIBZ_A_LDADD)
 
-gzip_u_libz_c: gzip_u_libz_c.o libz_h2
+gzip_u_libz_c: gzip_u_libz_c.o libz_c
 		$(CC) $(CFLAGS) -o gzip_u_libz_c gzip_u_libz_c.o $(GZIP_U_LIBZ_C_LDADD)
 
 clean-progs:

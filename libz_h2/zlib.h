@@ -88,6 +88,12 @@ extern "C" {
 typedef voidpf (*alloc_func) OF((voidpf opaque, uInt items, uInt size));
 typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 
+#if defined(ZLIB_CAP_ONLY) || defined(SB_LIBZ_LIBCHERI)
+void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len);
+__capability void * bufcpy_c_tocap (__capability void * dst, const void * src, size_t len);
+__capability void * bufcpy_c (__capability void * dst, __capability const void * src, size_t len);
+#endif /* ZLIB_CAP_ONLY || SB_LIBZ_LIBCHERI */
+
 struct internal_state;
 
 typedef struct z_stream_s {

@@ -221,6 +221,51 @@ int ZEXPORT deflateInit_(strm, level, version, stream_size)
 }
 
 /* ========================================================================= */
+#ifdef ZLIB_CAP_ONLY
+int ZEXPORT deflateInit2_ (z_streamp strm, int  level, int  method,
+                           int windowBits, int memLevel,
+                           int strategy, const char *version,
+                           int stream_size)
+{
+  struct lzparams params;
+  params.strm = strm;
+  params.level = level;
+  params.method = method;
+  params.windowBits = windowBits;
+  params.memLevel = memLevel ;
+  params.strategy = strategy;
+  params.version = (__capability void *)version;
+  params.stream_size = stream_size;
+  return deflateInit2_c(strm, (__capability void *)&params);
+}
+int ZEXPORT deflate (z_streamp strm, int flush)
+{
+  return deflate_c(strm, flush);
+}
+#endif /* ZLIB_CAP_ONLY */
+
+#if defined(ZLIB_CAP_ONLY) || defined(SB_LIBZ_LIBCHERI)
+void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len)
+{
+  bufcpy_c(cheri_ptr(dst, len), src, len);
+  return dst;
+}
+
+__capability void * bufcpy_c_tocap (__capability void * dst, const void * src, size_t len)
+{
+  return bufcpy_c(dst, cheri_ptr((void*)src, len), len);
+}
+
+__capability void * bufcpy_c (__capability void * dst, __capability const void * src, size_t len)
+{
+  __capability char * cdst = dst;
+  __capability const char * csrc = src;
+  while (len--)
+    *(cdst++) = *(csrc++);
+  return dst;
+}
+#endif /* ZLIB_CAP_ONLY || SB_LIBZ_LIBCHERI */
+
 ZEXTERN int ZEXPORT deflateInit2_c OF((z_streamp strm, __capability void * vparams));
 int ZEXPORT deflateInit2_c (z_streamp strm, __capability void * vparams)
 {
