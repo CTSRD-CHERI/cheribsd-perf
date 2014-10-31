@@ -149,13 +149,28 @@ gzip_u_libz_c: gzip_u_libz_c.o libz_c
 clean-progs:
 		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h gzip_u_libz_a gzip_u_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin
 
-push:
+push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h push-gzip_u_libz_a push-gzip_u_libz_c push-test
+
+push-gzip_u:
 		$(CHERI_PUSH) gzip_u $(CHERI_PUSH_DIR)/gzip_u
+
+push-gzip_a:
 		$(CHERI_PUSH) gzip_a $(CHERI_PUSH_DIR)/gzip_a
+
+push-gzip_h:
 		$(CHERI_PUSH) gzip_h $(CHERI_PUSH_DIR)/gzip_h
-		$(CHERI_PUSH) gzip_u_libz_h $(CHERI_PUSH_DIR)/gzip_u_libz_h
-		$(CHERI_PUSH) gzip_u_libz_a $(CHERI_PUSH_DIR)/gzip_u_libz_a
-		$(CHERI_PUSH) gzip_u_libz_c $(CHERI_PUSH_DIR)/gzip_u_libz_c
-		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin $(CHERI_PUSH_DIR)/lzsandbox-helper.bin
 		$(CHERI_PUSH) gzsandbox-helper_h.bin $(CHERI_PUSH_DIR)/gzsandbox-helper_h.bin
+
+push-gzip_u_libz_h:
+		$(CHERI_PUSH) gzip_u_libz_h $(CHERI_PUSH_DIR)/gzip_u_libz_h
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper.bin $(CHERI_PUSH_DIR)/lzsandbox-helper.bin
+
+push-gzip_u_libz_a:
+		$(CHERI_PUSH) gzip_u_libz_a $(CHERI_PUSH_DIR)/gzip_u_libz_a
+
+push-gzip_u_libz_c:
+		$(CHERI_PUSH) gzip_u_libz_c $(CHERI_PUSH_DIR)/gzip_u_libz_c
+
+push-test:
 		$(CHERI_PUSH) test.sh $(CHERI_PUSH_DIR)/test.sh
+
