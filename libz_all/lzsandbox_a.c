@@ -155,7 +155,6 @@ sandbox_lz_deflate_buffer(struct lc_host *lchp, uint32_t opno,
 int
 deflate_wrapper(z_streamp strm, int flush)
 {
-  printf("lzsandbox deflate wrapper.\n");
 	lzsandbox_initialize();
   return (lz_deflate_insandbox(strm, flush));
 }
@@ -258,7 +257,6 @@ deflateInit2_wrapper(z_streamp strm, int level, int method,
   int windowBits, int memLevel, int strategy, const char *version,
   int stream_size)
 {
-  printf("lzsandbox deflateInit2 wrapper.\n");
 	lzsandbox_initialize();
   return (lz_deflateInit2_insandbox(strm, level, method, windowBits, memLevel, strategy, version, stream_size));
 }
@@ -298,7 +296,6 @@ lz_deflateEnd_insandbox(z_streamp strm)
   params.replenp = &len;
   params.rep_fdp = NULL;
   params.rep_fdcountp = NULL;
-  fprintf(stderr, "sending %d bytes\n", (int) params.req[0].iov_len);
 	if (lch_rpc_fix(&params) < 0)
 		err(-1, "lch_rpc");
 	if (len != sizeof(rep))
@@ -338,10 +335,7 @@ sandbox_lz_deflateEnd_buffer(struct lc_host *lchp, uint32_t opno,
 int
 deflateEnd_wrapper(z_streamp strm)
 {
-  fprintf(stderr, "lzsandbox deflateEnd wrapper.\n");
 	lzsandbox_initialize();
-  fprintf(stderr, "returning from deflateEnd wrapper.\n");
-  return -5;
   return (lz_deflateEnd_insandbox(strm));
 }
 
@@ -355,7 +349,6 @@ int lzsandbox(void * context)
 	u_char *buffer;
 	size_t len;
 
-printf("%d: in lzsandbox\n", getpid());
 	if (lcs_get(&lchp) < 0)
 		errx(-1, "libcapsicum sandbox binary");
 
@@ -363,13 +356,11 @@ printf("%d: in lzsandbox\n", getpid());
 		if (lcs_recvrpc(lchp, &opno, &seqno, &buffer, &len) < 0) {
 			if (errno == EPIPE)
       {
-        printf("quit: EPIPE\n");
 				_Exit(-1);
       }
 			else
 				err(-1, "lcs_recvrpc");
 		}
-fprintf(stderr, "%d: received opno: %u\n", getpid(),opno);
 		switch (opno) {
 		case PROXIED_LZ_DEFLATE:
 			sandbox_lz_deflate_buffer(lchp, opno, seqno, (char*)buffer,
@@ -378,6 +369,7 @@ fprintf(stderr, "%d: received opno: %u\n", getpid(),opno);
 		case PROXIED_LZ_DEFLATEINIT2:
 			sandbox_lz_deflateInit2_buffer(lchp, opno, seqno, (char*)buffer,
 			    len);
+      break;
 		case PROXIED_LZ_DEFLATEEND:
 			sandbox_lz_deflateEnd_buffer(lchp, opno, seqno, (char*)buffer,
 			    len);

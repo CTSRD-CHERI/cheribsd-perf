@@ -705,16 +705,12 @@ struct timeval before, after, diff, total;
 
 //gettimeofday(&before, NULL);
 		error = deflate(&z, Z_NO_FLUSH);
-//gettimeofday(&after, NULL);
-//timersub(&after, &before, &diff);
-//timeradd(&total, &diff, &total);
 		if (error != Z_OK && error != Z_STREAM_END) {
 			maybe_warnx("deflate failed");
 			in_tot = -1;
 			goto out;
 		}
 	}
-//fprintf(stderr, "deflate time: %llu us\n", (unsigned long long)total.tv_sec*1000000ULL+(unsigned long long)total.tv_usec);
 
 	/* clean up */
 	for (;;) {
@@ -1381,7 +1377,6 @@ file_compress(char *file, char *outfile, size_t outsize)
 		out = STDOUT_FILENO;
 
 struct timeval before, after, diff;
-  //gettimeofday(&before, NULL);
   insize =
 #if defined(SB_GZIP_CAPSICUM) || defined(SB_GZIP_LIBCHERI)
 	gz_compress_wrapper
@@ -1389,9 +1384,6 @@ struct timeval before, after, diff;
 	gz_compress
 #endif /* SB_GZIP_CAPSICUM || SB_GZIP_LIBCHERI */
     (in, out, &size, basename(file), (uint32_t)isb.st_mtime);
-  //gettimeofday(&after, NULL);
-  //timersub(&after, &before, &diff);
-  //fprintf(stderr, "gz_compress time: %llu us\n", (unsigned long long)diff.tv_sec*1000000ULL+(unsigned long long)diff.tv_usec);
 
 	(void)close(in);
 
