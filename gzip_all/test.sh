@@ -20,8 +20,8 @@ done
 }
 
 nrun=3
-SIZES="64 256"
-# 512 4096"
+#SIZES="64 256 512 4096 16384 65536 500000"
+SIZES="65536"
 
 generate ()
 {
@@ -63,6 +63,7 @@ do
   dotestn ./gzip_u_libz_a $nrun "(unmodified gzip + Capsicum zlib)"
   dotestn ./gzip_u_libz_h $nrun "(unmodified gzip + libcheri zlib)"
   dotestn ./gzip_h $nrun "(libcheri gzip)"
+  dotestn ./gzip_a_libz_c $nrun "(Capsicum gzip + capability-only zlib)"
   echo "---------END RUN ($sz bytes) --------"
 done
 }

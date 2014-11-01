@@ -266,6 +266,15 @@ __capability void * bufcpy_c (__capability void * dst, __capability const void *
 }
 #endif /* ZLIB_CAP_ONLY || SB_LIBZ_LIBCHERI */
 
+#ifdef SB_DEBUG
+#if defined(ZLIB_CAP_ONLY)
+#define ef(...) fprintf(stderr, __VA_ARGS__)
+#elif defined(SB_LIBZ_LIBCHERI)
+#endif /* ZLIB_CAP_ONLY, SB_LIBZ_LIBCHERI */
+#else /* SB_DEBUG */
+#define ef(...) do {} while (0)
+#endif /* SB_DEBUG */
+
 ZEXTERN int ZEXPORT deflateInit2_c OF((z_streamp strm, __capability void * vparams));
 int ZEXPORT deflateInit2_c (z_streamp strm, __capability void * vparams)
 {

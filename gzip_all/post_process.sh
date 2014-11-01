@@ -34,7 +34,9 @@ generate_graph ()
   cat <<EOF >graph.plot
 set terminal png size 640,480
 set output 'tmp.png'
-set title "graph"
+set title "compression time for 3 files (averaged over 3 runs)"
+set xlabel "bytes each of /dev/random, /dev/zero, b64encode /dev/random"
+set ylabel "total seconds"
 plot \\
 EOF
   for file in graph-*

@@ -33,9 +33,10 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 static int subcap (__capability void * s, __capability void * b)
 {
   return
+    ((void*)s == NULL && (void*)b == NULL) || (
     cheri_getbase(s) >= cheri_getbase(b) &&
     cheri_getbase(s) <= cheri_getbase(b)+cheri_getlen(b) &&
-    cheri_getlen(s) <= cheri_getlen(b) - (cheri_getbase(s) - cheri_getbase(b));
+    cheri_getlen(s) <= cheri_getlen(b) - (cheri_getbase(s) - cheri_getbase(b)));
 }
 
 static int lzsandbox_initialize (z_streamp strm)
@@ -95,8 +96,8 @@ int ZEXPORT deflate (z_streamp strm, int flush)
   int rc;
   struct lzparams params;
 
-  __capability void * in = cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD);
-  __capability void * out = cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE);
+  __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD) : strm->next_in_p;
+  __capability void * out = strm->next_out_p ? cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE) : strm->next_out_p;
 
   memset(&params, 0, sizeof params);
 
@@ -130,8 +131,8 @@ int ZEXPORT deflate (z_streamp strm, int flush)
    * non-termination in the user application.
    */
 
-  if (!subcap(cheri_ptr(strm->next_in_p, strm->avail_in), in) ||
-      !subcap(cheri_ptr(strm->next_out_p, strm->avail_out), out))
+  if (!subcap(strm->next_in_p ? cheri_ptr(strm->next_in_p, strm->avail_in) : strm->next_in_p, in) ||
+      !subcap(strm->next_out_p ? cheri_ptr(strm->next_out_p, strm->avail_out) : strm->next_out_p, out))
   {
     fprintf(stderr, "invalid pointer or length returned by sandbox");
     exit(1);
