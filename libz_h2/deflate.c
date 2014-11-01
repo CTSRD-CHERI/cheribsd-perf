@@ -245,7 +245,10 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 #endif /* ZLIB_CAP_ONLY */
 
 #if defined(ZLIB_CAP_ONLY) || defined(SB_LIBZ_LIBCHERI)
-void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len)
+#define bufcpy_c_fromcap memcpy_c_fromcap
+#define bufcpy_c_tocap memcpy_c_tocap
+#define bufcpy_c memcpy_c
+/*void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len)
 {
   bufcpy_c(cheri_ptr(dst, len), src, len);
   return dst;
@@ -263,7 +266,7 @@ __capability void * bufcpy_c (__capability void * dst, __capability const void *
   while (len--)
     *(cdst++) = *(csrc++);
   return dst;
-}
+}*/
 #endif /* ZLIB_CAP_ONLY || SB_LIBZ_LIBCHERI */
 
 #ifdef SB_DEBUG

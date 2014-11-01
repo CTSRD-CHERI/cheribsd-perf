@@ -96,7 +96,8 @@ int ZEXPORT deflate (z_streamp strm, int flush)
   int rc;
   struct lzparams params;
 
-  __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD) : strm->next_in_p;
+  /* XXX: need CHERI_PERM_LOAD_CAP for memcpy_c in zlib due to current CLC/CSC semantics that require the permission regardless of the tag bit status. */
+  __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
   __capability void * out = strm->next_out_p ? cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE) : strm->next_out_p;
 
   memset(&params, 0, sizeof params);
