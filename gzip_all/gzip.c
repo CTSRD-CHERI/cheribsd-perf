@@ -76,6 +76,8 @@ __FBSDID("$FreeBSD$");
 #ifdef SB_COLLECT_STATS
 int num_ccalls;
 int num_sandboxes;
+int num_capsicum_sandboxes;
+int num_capsicum_host_rpcs;
 #endif /* SB_COLLECT_STATS */
 
 #if defined(ZLIB_CAP_ONLY)
@@ -357,6 +359,8 @@ main(int argc, char **argv)
 #ifdef SB_COLLECT_STATS
   num_ccalls = 0;
   num_sandboxes = 0;
+  num_capsicum_sandboxes = 0;
+  num_capsicum_host_rpcs = 0;
 #endif /* SB_COLLECT_STATS */
 
 #ifndef SMALL
@@ -474,7 +478,9 @@ main(int argc, char **argv)
 
 #ifdef SB_COLLECT_STATS
   fprintf(stderr, "Number of CCalls: %d\n", num_ccalls);
-  fprintf(stderr, "Number of sandboxes: %d\n", num_sandboxes);
+  fprintf(stderr, "Number of CHERI sandboxes: %d\n", num_sandboxes);
+  fprintf(stderr, "Number of Capsicum sandboxes: %d\n", num_capsicum_sandboxes);
+  fprintf(stderr, "Number of Capsicum host RPCs: %d\n", num_capsicum_host_rpcs);
 #endif /* SB_COLLECT_STATS */
 
 	exit(exit_value);

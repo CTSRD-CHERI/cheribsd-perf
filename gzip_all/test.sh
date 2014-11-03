@@ -1,17 +1,36 @@
 prun ()
 {
-echo $@
-$@
+  echo $@
+  $@
 }
 
-dotest ()
+DESC_time_test="tests compression time"
+time_test ()
 {
-  echo testing: $@
-  echo file: results-$b-$sz
   cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>results-$b-$sz
-  cat results-$b-$sz
+  # only show errors:
+  cat results-$b-$sz | grep -v ".*real.*user.*sys$"
+  rc=$?
+  if [ $rc -eq 0 ]
+  then
+    echo "*****FAILED: $@ (file: results-$b-$sz)-----"
+  fi
 }
 
+DESC_sb_create_test="tests sandbox creation overhead"
+sb_create_test ()
+{
+  cat file_list | xargs echo "$1 -c"
+  cat file_list | time xargs $1 -c 1>/dev/null 2>>results-sb-create-$b-$sz
+  cat results-sb-create-$b-$sz | grep -v ".*real.*user.*sys$"
+  rc=$?
+  if [ $rc -eq 0 ]
+  then
+    echo "*****FAILED: $@ (file: results-sb-create-$b-$sz)-----"
+  fi
+}
+
+# define the function to call for each test in $func
 dotestn ()
 {
 b=`basename $1`
@@ -19,8 +38,8 @@ rm -f results-$b-$sz
 j=0
 while [ $j -ne $2 ]
 do
-  echo j=$j runs=$2
-  dotest $1 $3
+  echo "---$func--- `expr $j + 1`/$2 runs for $1 ($sz bytes)"
+  $func $1 $desc
   j=`expr $j + 1`
 done
 }
@@ -70,9 +89,14 @@ DESC_gzip_u_libz_hm="(unmodified gzip + libcheri zlib with multiple sandboxes)"
 DESC_gzip_h="(libcheri gzip)"
 DESC_gzip_a_libz_c="(Capsicum gzip + capability-only zlib)"
 
-runtests ()
+runtest ()
 {
 i=1
+test_func=$1
+func=$test_func
+test_desc_ref=\$DESC_$test_func
+test_desc=`eval echo $test_desc_ref`
+echo runtest: $test_func: $test_desc
 for sz in $SIZES
 do
   echo "---------BEGIN RUN ($sz bytes) --------"
@@ -81,10 +105,16 @@ do
   for prog in $PROGS
   do
     desc_ref=\$DESC_$prog
-    prun dotestn ./$prog $nrun `eval echo $desc_ref`
+    desc=`eval echo $desc_ref`
+    dotestn ./$prog $nrun
   done
   echo "---------END RUN ($sz bytes) --------"
 done
+}
+
+runtests ()
+{
+runtest sb_create_test
 }
 
 push ()

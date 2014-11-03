@@ -15,6 +15,11 @@
 
 #include <sys/capability.h>
 
+#ifdef SB_COLLECT_STATS
+extern int num_capsicum_sandboxes;
+extern int num_capsicum_host_rpcs;
+#endif /* SB_COLLECT_STATS */
+
 int
 cap_new (int fd, cap_rights_t rights)
 {
@@ -56,6 +61,10 @@ void
 sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), void * context)
 {
 	int pid, fd_sockpair[2];
+
+#ifdef SB_COLLECT_STATS
+  num_capsicum_sandboxes++;
+#endif /* SB_COLLECT_STATS */
 
 	/* Establish a socket pair for host-sandbox */
 	fd_sockpair[0] = fd_sockpair[1] = -1;
@@ -288,6 +297,10 @@ host_rpc_internal_fix(struct host_rpc_params * params)
 	size_t left, off, space, totlen, want;
 	ssize_t len;
 	int i;
+
+#ifdef SB_COLLECT_STATS
+  num_capsicum_host_rpcs++;
+#endif /* SB_COLLECT_STATS */
 
 	bzero(&req_hdr, sizeof(req_hdr));
 	req_hdr.sandboxrpc_reqhdr_magic = SANDBOX_RPC_REQUEST_HDR_MAGIC;

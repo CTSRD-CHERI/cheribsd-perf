@@ -8,6 +8,8 @@ NO_MAN=
 CFLAGS += -Werror -Wall 
 CFLAGS += -Wextra
 
+CFLAGS += $(OPTCFLAGS)
+
 LDFLAGS +=
 
 all: libsep.a libsep.so
