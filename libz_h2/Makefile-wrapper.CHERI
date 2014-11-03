@@ -1,24 +1,24 @@
-# $FreeBSD$
-
 .include "../cheridefs.mk"
 
-LIB=zwrapper
-SHLIB_MAJOR=1
-USE_CHERI=yes
-SRCS=zwrapper.c
 CFLAGS+=-DZLIB_INCL_WRAPPER
 
 CFLAGS+=$(OPTCFLAGS)
 
-all: zwrapper.o
-	$(AR) -r tmp.a zwrapper.o
+zwrapper1.o:
+		$(CC) $(CFLAGS) -DLZ_SINGLE_SANDBOX -c zwrapper.c -o zwrapper1.o
+
+zwrapperm.o:
+		$(CC) $(CFLAGS) -c zwrapper.c -o zwrapperm.o
+
+all: zwrapper1.o zwrapperm.o
 	mkdir -p tmpdir
 	cd tmpdir && \
 	$(AR) -x ../../libcheri_u/libcheri.a && \
 	cd ..
-	$(AR) -r lib$(LIB).a zwrapper.o tmpdir/*.o
+	$(AR) -r libzwrapper1.a zwrapper1.o tmpdir/*.o
+	$(AR) -r libzwrapperm.a zwrapperm.o tmpdir/*.o
 
 clean:
-	rm -f zwrapper.o lib$(LIB).a *.so *.o *.so.1
+	rm -f *.a *.so *.o *.so.1
 	rm -rf tmpdir
 

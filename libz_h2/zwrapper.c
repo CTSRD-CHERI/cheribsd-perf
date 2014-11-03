@@ -11,7 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef SB_COLLECT_STATS
 extern int num_ccalls;
+extern int num_sandboxes;
+#endif /* SB_COLLECT_STATS */
 
 static int			 lzsandbox_initialized;
 static struct    sandbox_class * sbcp;
@@ -23,7 +26,8 @@ struct cheri_object stderrfd;
 #define LZ_SANDBOX_HEAP_SIZE (4*1048576)
 
 /* if defined, a single sandbox instance is shared between all z_streams */
-#define LZ_SINGLE_SANDBOX
+/* Note: now controlled through Makefile-wrapper.CHERI */
+/*#define LZ_SINGLE_SANDBOX*/
 
 /* returns non-zero iff s is a subcapability of b */
 /* XXX: ignores permissions */
@@ -65,14 +69,23 @@ static int lzsandbox_initialize (z_streamp strm)
       fprintf(stderr, "sandbox_object_new");
       return -1;
     }
+#ifdef SB_COLLECT_STATS
+    num_sandboxes++;
+#endif /* SB_COLLECT_STATS */
 #endif /* LZ_SINGLE_SANDBOX */
   }
 
 #ifndef LZ_SINGLE_SANDBOX
-  if (sandbox_object_new(sbcp, &strm->sbop))
+  if (!strm->sbop)
   {
-    fprintf(stderr, "sandbox_object_new");
-    return -1;
+    if (sandbox_object_new(sbcp, &strm->sbop))
+    {
+      fprintf(stderr, "sandbox_object_new");
+      return -1;
+    }
+#ifdef SB_COLLECT_STATS
+    num_sandboxes++;
+#endif /* SB_COLLECT_STATS */
   }
 #endif /* !LZ_SINGLE_SANDBOX */
   return 0;
@@ -102,6 +115,7 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 {
   int rc;
   struct lzparams params;
+  void * sbop = strm->sbop;
 
   /* XXX: need CHERI_PERM_LOAD_CAP and CHERI_PERM_STORE_CAP for memcpy_c in zlib due to current CLC/CSC semantics that require the permission regardless of the tag bit status. */
   __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
@@ -150,6 +164,13 @@ int ZEXPORT deflate (z_streamp strm, int flush)
    * capabilities.
    */
   strm->msg = NULL;
+
+  /* XXX: avoid malicious alteration of sbop, but cases like this can
+   * easily be missed. A possible solution is for strm to contain a
+   * capability or pointer to a wrapper-internal structure, so that
+   * there is only one case for this kind of fix-up.
+   */
+  strm->sbop = sbop;
 
   return rc;
 }
@@ -219,8 +240,14 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
   /* create a temporary sandbox, or use existing one;
    * lzsandbox_initialize and lzsandbox_invoke deal with this
    */
-  z_stream strm;
-  lzsandbox_initialize(&strm);
+  static int initialized = 0;
+  static z_stream strm;
+  if (!initialized)
+  {
+    memset(&strm, 0, sizeof strm);
+    lzsandbox_initialize(&strm);
+    initialized = 1;
+  }
   return lzsandbox_invoke(&strm, LZOP_CRC32, &params);
   /* XXX: need some way of destroying this sandbox */
 }

@@ -18,6 +18,7 @@
 
 #ifdef SB_COLLECT_STATS
 extern int num_ccalls;
+extern int num_sandboxes;
 #endif /* SB_COLLECT_STATS */
 
 static int			 gzsandbox_initialized;
@@ -50,6 +51,9 @@ gzsandbox_initialize(void)
 
   if (sandbox_object_new(sbcp, &sbop))
     err(-1, "sandbox_object_new");
+#ifdef SB_COLLECT_STATS
+    num_sandboxes++;
+#endif /* SB_COLLECT_STATS */
 
   if (cheri_fd_new(STDERR_FILENO, &stderrfd) < 0)
     err(-1, "cheri_fd_new: STDERR_FILENO");

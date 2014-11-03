@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD$");
 
 #ifdef SB_COLLECT_STATS
 int num_ccalls;
+int num_sandboxes;
 #endif /* SB_COLLECT_STATS */
 
 #if defined(ZLIB_CAP_ONLY)
@@ -355,6 +356,7 @@ main(int argc, char **argv)
 
 #ifdef SB_COLLECT_STATS
   num_ccalls = 0;
+  num_sandboxes = 0;
 #endif /* SB_COLLECT_STATS */
 
 #ifndef SMALL
@@ -472,6 +474,7 @@ main(int argc, char **argv)
 
 #ifdef SB_COLLECT_STATS
   fprintf(stderr, "Number of CCalls: %d\n", num_ccalls);
+  fprintf(stderr, "Number of sandboxes: %d\n", num_sandboxes);
 #endif /* SB_COLLECT_STATS */
 
 	exit(exit_value);
