@@ -8,6 +8,8 @@ USE_CHERI=yes
 SRCS=zwrapper.c
 CFLAGS+=-DZLIB_INCL_WRAPPER
 
+CFLAGS+=$(OPTCFLAGS)
+
 all: zwrapper.o
 	$(AR) -r tmp.a zwrapper.o
 	mkdir -p tmpdir

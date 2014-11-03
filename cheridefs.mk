@@ -20,7 +20,7 @@ CHERI_SSH_HOST:=oregano
 CHERI_PUSH=/home/mbv21/git-tmp/myncp/myncp 192.168.1.100 8888
 CHERI_PULL=/home/mbv21/git-tmp/myncp/myncp -1 8888
 
-CHERI_PUSH_DIR=/mnt
+CHERI_PUSH_DIR=/mnt2
 
 MACHINE_ARCH=mips64
 MACHINE=mips

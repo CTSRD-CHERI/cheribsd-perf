@@ -35,6 +35,9 @@ extern __capability void	*cheri_system_type;
 #define OS_CODE		3	/* Unix */
 
 static struct cheri_object stderrfd;
+#ifdef SB_COLLECT_STATS
+__capability int * num_ccalls;
+#endif /* SB_COLLECT_STATS */
 
 /* TODO: set this on sandbox init */
 static const char * progname = "progname";
@@ -60,7 +63,11 @@ int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
-  __capability void * vparams);
+  __capability void * vparams
+#ifdef SB_COLLECT_STATS
+  ,__capability int * param_num_ccalls
+#endif /* SB_COLLECT_STATS */
+);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
@@ -75,6 +82,9 @@ size_t strlen_c (__capability const char * str);
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
   struct cheri_fd_ret rc;
+#ifdef SB_COLLECT_STATS
+  (*num_ccalls)++;
+#endif /* SB_COLLECT_STATS */
   rc = cheri_fd_read_c(fd, cheri_ptrperm(buf, nbytes, CHERI_PERM_STORE));
   errno = rc.cfr_retval1;
   return rc.cfr_retval0;
@@ -83,6 +93,9 @@ ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
 {
   struct cheri_fd_ret rc;
+#ifdef SB_COLLECT_STATS
+  (*num_ccalls)++;
+#endif /* SB_COLLECT_STATS */
   rc = cheri_fd_write_c(fd, cheri_ptrperm((void*)buf, nbytes, CHERI_PERM_LOAD));
   errno = rc.cfr_retval1;
   return rc.cfr_retval0;
@@ -151,7 +164,11 @@ int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
-  __capability void * vparams)
+  __capability void * vparams
+#ifdef SB_COLLECT_STATS
+  ,__capability int * param_num_ccalls
+#endif /* SB_COLLECT_STATS */
+)
 {
   __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
 #pragma clang diagnostic push
@@ -171,6 +188,9 @@ invoke(register_t op,
       nflag = params->nflag;
       qflag = params->qflag;
       tflag = params->tflag;
+#ifdef SB_COLLECT_STATS
+      num_ccalls = param_num_ccalls;
+#endif /* SB_COLLECT_STATS */
       initialized = 1;
     }
   }

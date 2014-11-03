@@ -16,6 +16,10 @@
 
 #include "gzip.h"
 
+#ifdef SB_COLLECT_STATS
+extern int num_ccalls;
+#endif /* SB_COLLECT_STATS */
+
 static int			 gzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
@@ -54,11 +58,20 @@ gzsandbox_initialize(void)
   params.nflag = nflag;
   params.qflag = qflag;
   params.tflag = tflag;
+
+#ifdef SB_COLLECT_STATS
+  num_ccalls++;
+#endif /* SB_COLLECT_STATS */
   
   if (sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
             0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
-            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD), cheri_zerocap(),
+            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD),
+#ifdef SB_COLLECT_STATS
+            cheri_ptrperm(&num_ccalls, sizeof num_ccalls, CHERI_PERM_LOAD | CHERI_PERM_STORE),
+#else /* SB_COLLECT_STATS */
+            cheri_zerocap(),
+#endif /* SB_COLLECT_STATS */
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap()))
     err(-1, "sandbox_object_cinvoke");
@@ -91,6 +104,9 @@ gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
   params.gsizep = cheri_ptrperm(gsizep, sizeof *gsizep, CHERI_PERM_STORE);
   params.origname = cheri_ptrperm((void*)origname, strlen(origname)+1, CHERI_PERM_LOAD);
   params.mtime = mtime;
+#ifdef SB_COLLECT_STATS
+  num_ccalls++;
+#endif /* SB_COLLECT_STATS */
   return sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
             0, 0, 0, 0, 0, 0, 0,
             cheri_zerocap(), cheri_zerocap(),

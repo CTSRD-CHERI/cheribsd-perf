@@ -1,3 +1,9 @@
+prun ()
+{
+echo $@
+$@
+}
+
 dotest ()
 {
   echo testing: $@
@@ -20,8 +26,18 @@ done
 }
 
 nrun=3
-#SIZES="64 256 512 4096 16384 65536 500000"
-SIZES="65536"
+SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
+MAXSIZE=50000000
+BS=1000000
+
+generate_large_files ()
+{
+  COUNT=`expr $MAXSIZE / $BS`
+  prun rm -f ZERO RANDOM ENTROPY
+  prun dd if=/dev/zero of=ZERO bs=$BS count=$COUNT
+  prun dd if=/dev/random of=RANDOM bs=$BS count=$COUNT
+  cat RANDOM | b64encode - > ENTROPY
+}
 
 generate ()
 {
@@ -29,12 +45,9 @@ generate ()
 # the following files are automatically generated from them
 for sz in $SIZES
 do
-  echo dd if=ZERO of=ZERO-$sz bs=$sz count=1
-  dd if=ZERO of=ZERO-$sz bs=$sz count=1
-  echo dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
-  dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
-  echo dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
-  dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
+  prun dd if=ZERO of=ZERO-$sz bs=$sz count=1
+  prun dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
+  prun dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
 done
 }
 
@@ -42,11 +55,9 @@ clean ()
 {
 for sz in $SIZES
 do
-  echo rm -f ZERO-$sz RANDOM-$sz ENTROPY-$sz
-  rm -f ZERO-$sz RANDOM-$sz ENTROPY-$sz
+  prun rm -f ZERO-$sz RANDOM-$sz ENTROPY-$sz
 done
-echo rm -f results*
-rm -f results*
+prun rm -f results*
 }
 
 runtests ()

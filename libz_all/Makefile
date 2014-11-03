@@ -5,6 +5,8 @@
 LIBZ_U_CFLAGS=
 LIBZ_A_CFLAGS=-DSB_LIBZ_CAPSICUM -I../libsep/
 
+CFLAGS+=$(OPTCFLAGS)
+
 OBJS+=		adler32.o
 OBJS+=		compress.o
 OBJS+=		crc32.o

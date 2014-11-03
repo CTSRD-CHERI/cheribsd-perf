@@ -73,6 +73,10 @@ __FBSDID("$FreeBSD$");
 #include "gzip.h"
 #endif /* SB_GZIP_LIBCHERI */
 
+#ifdef SB_COLLECT_STATS
+int num_ccalls;
+#endif /* SB_COLLECT_STATS */
+
 #if defined(ZLIB_CAP_ONLY)
 #define MAYBE_MAKE_CAP(x) ((__capability void *)(x))
 #define MAYBE_MAKE_PTR(x) ((void *)(x))
@@ -349,6 +353,10 @@ main(int argc, char **argv)
 #endif
 	int ch;
 
+#ifdef SB_COLLECT_STATS
+  num_ccalls = 0;
+#endif /* SB_COLLECT_STATS */
+
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)
 		prepend_gzip(gzip, &argc, &argv);
@@ -461,6 +469,11 @@ main(int argc, char **argv)
 	if (qflag == 0 && lflag && argc > 1)
 		print_list(-1, 0, "(totals)", 0);
 #endif
+
+#ifdef SB_COLLECT_STATS
+  fprintf(stderr, "Number of CCalls: %d\n", num_ccalls);
+#endif /* SB_COLLECT_STATS */
+
 	exit(exit_value);
 }
 

@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern int num_ccalls;
+
 static int			 lzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
@@ -83,6 +85,11 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
 #else /* LZ_SINGLE_SANDBOX */
 #define local_sbop strm->sbop
 #endif /* LZ_SINGLE_SANDBOX */
+
+#ifdef SB_COLLECT_STATS
+  num_ccalls++;
+#endif /* SB_COLLECT_STATS */
+
   return sandbox_object_cinvoke(local_sbop, opno, 
             0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
@@ -96,9 +103,9 @@ int ZEXPORT deflate (z_streamp strm, int flush)
   int rc;
   struct lzparams params;
 
-  /* XXX: need CHERI_PERM_LOAD_CAP for memcpy_c in zlib due to current CLC/CSC semantics that require the permission regardless of the tag bit status. */
+  /* XXX: need CHERI_PERM_LOAD_CAP and CHERI_PERM_STORE_CAP for memcpy_c in zlib due to current CLC/CSC semantics that require the permission regardless of the tag bit status. */
   __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
-  __capability void * out = strm->next_out_p ? cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE) : strm->next_out_p;
+  __capability void * out = strm->next_out_p ? cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out_p;
 
   memset(&params, 0, sizeof params);
 
