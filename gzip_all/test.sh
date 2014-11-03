@@ -60,6 +60,16 @@ done
 prun rm -f results*
 }
 
+PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a gzip_u_libz_h gzip_h gzip_a_libz_c"
+DESC_gzip_u="(unmodified gzip + unmodified zlib)"
+DESC_gzip_u_libz_c="(unmodified gzip + capability-only zlib)"
+DESC_gzip_a="(Capsicum gzip)"
+DESC_gzip_u_libz_a="(unmodified gzip + Capsicum zlib)"
+DESC_gzip_u_libz_h1="(unmodified gzip + libcheri zlib with single sandbox)"
+DESC_gzip_u_libz_hm="(unmodified gzip + libcheri zlib with multiple sandboxes)"
+DESC_gzip_h="(libcheri gzip)"
+DESC_gzip_a_libz_c="(Capsicum gzip + capability-only zlib)"
+
 runtests ()
 {
 i=1
@@ -68,13 +78,11 @@ do
   echo "---------BEGIN RUN ($sz bytes) --------"
   echo -e "ZERO-$sz\nRANDOM-$sz\nENTROPY-$sz\n" > file_list
   cat file_list
-  dotestn ./gzip_u $nrun "(unmodified gzip + unmodified zlib)"
-  dotestn ./gzip_u_libz_c $nrun "(unmodified gzip + capability-only zlib)"
-  dotestn ./gzip_a $nrun "(Capsicum gzip)"
-  dotestn ./gzip_u_libz_a $nrun "(unmodified gzip + Capsicum zlib)"
-  dotestn ./gzip_u_libz_h $nrun "(unmodified gzip + libcheri zlib)"
-  dotestn ./gzip_h $nrun "(libcheri gzip)"
-  dotestn ./gzip_a_libz_c $nrun "(Capsicum gzip + capability-only zlib)"
+  for prog in $PROGS
+  do
+    desc_ref=\$DESC_$prog
+    prun dotestn ./$prog $nrun `eval echo $desc_ref`
+  done
   echo "---------END RUN ($sz bytes) --------"
 done
 }

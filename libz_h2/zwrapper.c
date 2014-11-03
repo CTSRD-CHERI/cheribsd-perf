@@ -25,16 +25,13 @@ struct cheri_object stderrfd;
 #define LZ_SANDBOX_BIN "lzsandbox-helper.bin"
 #define LZ_SANDBOX_HEAP_SIZE (4*1048576)
 
-/* if defined, a single sandbox instance is shared between all z_streams */
-/* Note: now controlled through Makefile-wrapper.CHERI */
-/*#define LZ_SINGLE_SANDBOX*/
-
 /* returns non-zero iff s is a subcapability of b */
 /* XXX: ignores permissions */
 static int subcap (__capability void * s, __capability void * b);
 
 static int lzsandbox_initialize (z_streamp strm);
-static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params);
+static int lzsandbox_invoke (z_streamp strm, int opno,
+  struct lzparams * params);
 
 static int subcap (__capability void * s, __capability void * b)
 {
@@ -42,7 +39,8 @@ static int subcap (__capability void * s, __capability void * b)
     ((void*)s == NULL && (void*)b == NULL) || (
     cheri_getbase(s) >= cheri_getbase(b) &&
     cheri_getbase(s) <= cheri_getbase(b)+cheri_getlen(b) &&
-    cheri_getlen(s) <= cheri_getlen(b) - (cheri_getbase(s) - cheri_getbase(b)));
+    cheri_getlen(s) <= cheri_getlen(b) -
+      (cheri_getbase(s) - cheri_getbase(b)));
 }
 
 static int lzsandbox_initialize (z_streamp strm)
@@ -51,9 +49,11 @@ static int lzsandbox_initialize (z_streamp strm)
   {
     lzsandbox_initialized = 1;
 
-    if (sandbox_class_new(LZ_SANDBOX_BIN, LZ_SANDBOX_HEAP_SIZE, &sbcp))
+    if (sandbox_class_new(LZ_SANDBOX_BIN,
+          LZ_SANDBOX_HEAP_SIZE, &sbcp))
     {
-      fprintf(stderr, "sandbox_class_new %s, %d\n", LZ_SANDBOX_BIN, LZ_SANDBOX_HEAP_SIZE);
+      fprintf(stderr, "sandbox_class_new %s, %d\n",
+        LZ_SANDBOX_BIN, LZ_SANDBOX_HEAP_SIZE);
       return -1;
     }
   
@@ -91,7 +91,8 @@ static int lzsandbox_initialize (z_streamp strm)
   return 0;
 }
 
-static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
+static int lzsandbox_invoke (z_streamp strm, int opno,
+  struct lzparams * params)
 {
 #ifdef LZ_SINGLE_SANDBOX
 #define local_sbop sbop
@@ -106,7 +107,9 @@ static int lzsandbox_invoke (z_streamp strm, int opno, struct lzparams * params)
   return sandbox_object_cinvoke(local_sbop, opno, 
             0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
-            cheri_ptrperm(params, sizeof(struct lzparams), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap(),
+            cheri_ptrperm(params, sizeof(struct lzparams),
+                CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP),
+            cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
 }
@@ -117,18 +120,29 @@ int ZEXPORT deflate (z_streamp strm, int flush)
   struct lzparams params;
   void * sbop = strm->sbop;
 
-  /* XXX: need CHERI_PERM_LOAD_CAP and CHERI_PERM_STORE_CAP for memcpy_c in zlib due to current CLC/CSC semantics that require the permission regardless of the tag bit status. */
-  __capability void * in = strm->next_in_p ? cheri_ptrperm(strm->next_in_p, strm->avail_in, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
-  __capability void * out = strm->next_out_p ? cheri_ptrperm(strm->next_out_p, strm->avail_out, CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out_p;
+  /*XXX: need CHERI_PERM_LOAD_CAP and CHERI_PERM_STORE_CAP for
+   * memcpy_c in zlib due to current CLC/CSC semantics that require
+   * the permission regardless of the tag bit status.
+   */
+  __capability void * in = strm->next_in_p ?
+    cheri_ptrperm(strm->next_in_p, strm->avail_in,
+        CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
+  __capability void * out = strm->next_out_p ?
+     cheri_ptrperm(strm->next_out_p, strm->avail_out,
+        CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out_p;
 
   memset(&params, 0, sizeof params);
 
-  /* lzsandbox-helper and the user app (e.g. gzip) have a different view of z_streamp; this syncs them up */
+  /* lzsandbox-helper and the user app (e.g. gzip) have a different
+   * view of z_streamp; this syncs them up.
+   */
   strm->next_in_c = in;
   strm->next_out_c = out;
 
-  params.strm = cheri_ptrperm(strm,
-    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE | CHERI_PERM_STORE_CAP | CHERI_PERM_STORE_LOCAL_CAP);
+  params.strm = cheri_ptrperm(strm, sizeof(z_stream),
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP |
+    CHERI_PERM_STORE | CHERI_PERM_STORE_CAP |
+    CHERI_PERM_STORE_LOCAL_CAP);
   params.flush = flush;
 
   rc = lzsandbox_invoke(strm, LZOP_DEFLATE, &params);
@@ -138,19 +152,23 @@ int ZEXPORT deflate (z_streamp strm, int flush)
   strm->next_out_p = (void*)strm->next_out_c;
 
   /* XXX: not sure how this should work:
+   *
    * strm->next_in_c might have been modified to point to
    * some previously passed capability (e.g. an old next_out_c).
+   *
    * In this case, the sandbox could (on next invoke) read previous
    * output, etc.
-   * Currently we check whether the capability falls within the
-   * bounds it should, but this is manual and not nice.
+   *
+   * Currently we check whether the capability falls within the bounds
+   * it should, but this is manual and not nice.
+   *
    * Should other strm parameters be checked for sanity?
    */
 
   /* XXX: even with this check, there's nothing stopping the sandbox
-   * from not increasing next_in. That is, we need to ensure
-   * progress; otherwise, a sandbox could potentially cause
-   * non-termination in the user application.
+   * from not increasing next_in. That is, we need to ensure progress;
+   * otherwise, a sandbox could potentially cause non-termination
+   * in the user application.
    */
 
   if (!subcap(strm->next_in_p ? cheri_ptr(strm->next_in_p, strm->avail_in) : strm->next_in_p, in) ||
@@ -182,7 +200,7 @@ int ZEXPORT inflate (z_streamp strm, int flush)
   return -1;
 }
 
-int ZEXPORT deflateInit2_ (z_streamp strm, int  level, int  method,
+int ZEXPORT deflateInit2_ (z_streamp strm, int level, int method,
                            int windowBits, int memLevel,
                            int strategy, const char *version,
                            int stream_size)
@@ -193,17 +211,22 @@ int ZEXPORT deflateInit2_ (z_streamp strm, int  level, int  method,
   void * next_out = strm->next_out_p;
   uInt avail_in = strm->avail_in;
   uInt avail_out = strm->avail_out;
+  void * sbop;
   
   memset(&params, 0, sizeof params);
   lzsandbox_initialize(strm);
-  params.strm = cheri_ptrperm(strm,
-    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE); /* XXX: need to sync up cap ptrs? */
+  sbop = strm->sbop;
+  params.strm = cheri_ptrperm(strm, sizeof(z_stream),
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE);
+  strm->next_in_c = NULL;
+  strm->next_out_c = NULL;
   params.level = level;
   params.method = method;
   params.windowBits = windowBits;
   params.memLevel = memLevel;
   params.strategy = strategy;
-  params.version = cheri_ptrperm((void*)version, strlen(version)+1, CHERI_PERM_LOAD);
+  params.version = cheri_ptrperm((void*)version, strlen(version)+1,
+    CHERI_PERM_LOAD);
   params.stream_size = stream_size;
 
   rc = lzsandbox_invoke(strm, LZOP_DEFLATEINIT2, &params);
@@ -214,6 +237,7 @@ int ZEXPORT deflateInit2_ (z_streamp strm, int  level, int  method,
   strm->next_out_p = next_out;
   strm->avail_out = avail_out;
   strm->msg = NULL;
+  strm->sbop = sbop;
 
   return rc;
 }
@@ -234,7 +258,8 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
   struct lzparams params;
   memset(&params, 0, sizeof params);
   params.crc = crc;
-  params.buf = buf ? cheri_ptrperm((void*)buf, len, CHERI_PERM_LOAD) : buf;
+  params.buf = buf ? cheri_ptrperm((void*)buf, len,
+    CHERI_PERM_LOAD) : buf;
   params.len = len;
 
   /* create a temporary sandbox, or use existing one;
@@ -248,8 +273,11 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
     lzsandbox_initialize(&strm);
     initialized = 1;
   }
-  return lzsandbox_invoke(&strm, LZOP_CRC32, &params);
+  void * sbop = strm.sbop;
   /* XXX: need some way of destroying this sandbox */
+  int rc = lzsandbox_invoke(&strm, LZOP_CRC32, &params);
+  strm.sbop = sbop;
+  return rc;
 }
 
 int ZEXPORT inflateEnd (z_streamp strm)
@@ -263,6 +291,6 @@ int ZEXPORT deflateEnd (z_streamp strm)
   struct lzparams params;
   memset(&params, 0, sizeof params);
   params.strm = cheri_ptrperm(strm,
-    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE); /* no sync up of cap ptrs; deflateEnd doesn't need them */
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE);
   return lzsandbox_invoke(strm, LZOP_DEFLATEEND, &params);
 }
