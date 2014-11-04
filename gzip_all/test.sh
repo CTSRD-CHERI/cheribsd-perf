@@ -4,37 +4,40 @@ prun ()
   $@
 }
 
-DESC_time_test="tests compression time"
-time_test ()
+check_results ()
 {
-  cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>results-$b-$sz
   # only show errors:
-  cat results-$b-$sz | grep -v ".*real.*user.*sys$"
+  cat results-$func-$b-$sz | grep -v ".*real.*user.*sys$\|^\[stat\]"
   rc=$?
   if [ $rc -eq 0 ]
   then
-    echo "*****FAILED: $@ (file: results-$b-$sz)-----"
+    echo "*****FAILED: $@ (file: results-$func-$b-$sz)-----"
   fi
+}
+
+DESC_compress_time_test="tests compression time"
+compress_time_test ()
+{
+  cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>results-$func-$b-$sz
+  check_results
 }
 
 DESC_sb_create_test="tests sandbox creation overhead"
 sb_create_test ()
 {
   cat file_list | xargs echo "$1 -c"
-  cat file_list | time xargs $1 -c 1>/dev/null 2>>results-sb-create-$b-$sz
-  cat results-sb-create-$b-$sz | grep -v ".*real.*user.*sys$"
-  rc=$?
-  if [ $rc -eq 0 ]
-  then
-    echo "*****FAILED: $@ (file: results-sb-create-$b-$sz)-----"
-  fi
+  cat file_list | time xargs $1 -c 1>/dev/null 2>>results-$func-$b-$sz
+  check_results
 }
+
+DESC_compress_verify_test="tests compression correctness"
+
 
 # define the function to call for each test in $func
 dotestn ()
 {
 b=`basename $1`
-rm -f results-$b-$sz
+rm -f results-$func-$b-$sz
 j=0
 while [ $j -ne $2 ]
 do
@@ -45,9 +48,10 @@ done
 }
 
 nrun=3
-SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
+#SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
+SIZES="1 2"
 MAXSIZE=50000000
-BS=1000000
+BS=$MAXSIZE
 
 generate_large_files ()
 {
@@ -76,10 +80,11 @@ for sz in $SIZES
 do
   prun rm -f ZERO-$sz RANDOM-$sz ENTROPY-$sz
 done
-prun rm -f results*
+prun rm -f file_list results*
 }
 
-PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a gzip_u_libz_h gzip_h gzip_a_libz_c"
+#PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a gzip_u_libz_h1 gzip_u_libz_hm gzip_h gzip_a_libz_c"
+PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hm"
 DESC_gzip_u="(unmodified gzip + unmodified zlib)"
 DESC_gzip_u_libz_c="(unmodified gzip + capability-only zlib)"
 DESC_gzip_a="(Capsicum gzip)"
@@ -115,6 +120,7 @@ done
 runtests ()
 {
 runtest sb_create_test
+runtest compress_time_test
 }
 
 push ()

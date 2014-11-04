@@ -1,72 +1,142 @@
-# ministat-format dependent:
-avg_field=6
-
 extract_avg ()
 {
-  ministat -n $file > ${file}_stat
-  #avg_field=`cat ${file}_stat | awk '{for(i=0; i<NF; i++) if ($i=="Avg")print i;}'`
-  #tail -n 1 ${file}_stat | awk '{for (i=0; i<NF; i++) if ($i==$avg_field) print $i;}' avg_field=$avg_field 
-  avg_value=`tail -n 1 ${file}_stat | awk '{for (i=1; i<=NF; i++) if ($i==$avg_field) print $i;}' avg_field=$avg_field`
+  # ministat-format dependent:
+  avg_field=6
+  avg_value=`tail -n 1 ${stat_file} | awk '{print $avg_field;}' avg_field=$avg_field`
+}
+
+extract_stats ()
+{
+  # find average time taken
+  stat_file=stat-${file_p}_time
+  cat $file | sed "s/^\[stat\].*$//g" | ministat -n > $stat_file
+  extract_avg
+  avg_time=$avg_value
+
+  # find average number of ccalls
+  stat_file=stat-${file_p}_ccalls
+  cat $file | grep "^\[stat\] Number of CCalls" | awk '{print $NF;}' | ministat -n > $stat_file
+  extract_avg
+  avg_ccalls=$avg_value
+  
+  # find average number of CHERI sandbox creations
+  stat_file=stat-${file_p}_cheri_sandboxes
+  cat $file | grep "^\[stat\] Number of CHERI sandboxes" | awk '{print $NF;}' | ministat -n > $stat_file
+  extract_avg
+  avg_cheri_sandboxes=$avg_value
 }
 
 append_curve ()
 {
-  echo $bytes $avg_value >> graph-$impl
+  tmp_ref=\$$stat_ref
+  echo $bytes `eval echo $tmp_ref` >> data-$prefix-$stat_ref-$impl
 }
 
 process_file ()
 {
-  # filename is of the form results-<implementation>-<number of bytes>
-  impl=`echo $file | awk -F"-" '{print $2}'`
-  bytes=`echo $file | awk -F"-" '{print $3}'`
+  # filename is of the form results-<prefix>-<implementation>-<number of bytes>
+  impl=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $2}'`
+  bytes=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $3}'`
+  filep=`echo $file | sed s/^results-//g`
   if [ $bytes -lt $minbytes ] ; then
     minbytes=$bytes
   fi
   if [ $bytes -gt $maxbytes ] ; then
     maxbytes=$bytes
   fi
-  extract_avg
+  extract_stats
   append_curve
 }
 
 generate_graph ()
 {
-  cat <<EOF >graph.plot
+  cat <<EOF >plot-$prefix-$stat_ref.plot
 set terminal png size 640,480
-set output 'tmp.png'
-set title "compression time for 3 files (averaged over 3 runs)"
-set xlabel "bytes each of /dev/random, /dev/zero, b64encode /dev/random"
-set ylabel "total seconds"
+set output 'output-$prefix-$stat_ref.png'
+set title "$title"
+set xlabel "$xlabel"
+set ylabel "$ylabel"
 plot \\
 EOF
-  for file in graph-*
+  for file in data-$prefix-$stat_ref-*
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
     #echo "'$file' with linespoints title '$file',\\" >> graph.plot
-    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> graph.plot
+    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot-$prefix-$stat_ref.plot
   done
-  gnuplot graph.plot
+  gnuplot plot-$prefix-$stat_ref.plot
 }
 
 display_graph ()
 {
-  sxiv tmp.png
+  sxiv output-$prefix-$stat_ref.png &
 }
 
 process_files ()
 {
-  for file in results-*
+  for file in results-$prefix-*
   do
     echo Processing $file ...
     process_file $file
   done
 }
 
-minbytes=9999999999999
-maxbytes=0
-rm -f results-*_stat graph-* graph.plot tmp.png
-tar xf results.tar
-process_files
-generate_graph
-display_graph
+clean ()
+{
+  rm -f results-* data-* stat-* *.plot *.png
+}
+
+# Call this with the following variables set appropriately:
+# prefix: the name of the test (see process_file for what the prefix
+#         represents)
+# stat_ref: the statistic to be plotted (see extract_stats for valid
+#           statistics)
+# xlabel: x-axis label
+# ylabel: y-axis label
+# title: graph title
+process_test ()
+{
+  minbytes=9999999999999
+  maxbytes=0
+  process_files
+  generate_graph
+  display_graph
+}
+
+process_tests ()
+{
+  prefix=sb_create_test
+  stat_ref=avg_time
+  xlabel="consecutive bytes of /dev/random, /dev/zero, b64encode /dev/random"
+  ylabel="total time (seconds)"
+  title="compression time for 3 files consecutively (averaged over 3 runs)"
+  process_test
+  
+  stat_ref=avg_ccalls
+  ylabel="number of CCalls"
+  title="number of CCalls for 3 files compressed consecutively (averaged over 3 runs)"
+  process_test
+  
+  stat_ref=avg_cheri_sandboxes
+  ylabel="number of CHERI sandboxes"
+  title="number of CHERI sandboxes for 3 files compressed consecutively (averaged over 3 runs)"
+  process_test
+  
+  prefix=compress_time_test
+  stat_ref=avg_time
+  xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
+  ylabel="total time (seconds)"
+  title="compression time for 3 files (averaged over 3 runs)"
+  process_test
+}
+
+all ()
+{
+  clean
+  tar xf results.tar
+  process_tests
+}
+
+$@
+

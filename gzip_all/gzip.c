@@ -477,10 +477,10 @@ main(int argc, char **argv)
 #endif
 
 #ifdef SB_COLLECT_STATS
-  fprintf(stderr, "Number of CCalls: %d\n", num_ccalls);
-  fprintf(stderr, "Number of CHERI sandboxes: %d\n", num_sandboxes);
-  fprintf(stderr, "Number of Capsicum sandboxes: %d\n", num_capsicum_sandboxes);
-  fprintf(stderr, "Number of Capsicum host RPCs: %d\n", num_capsicum_host_rpcs);
+  fprintf(stderr, "[stat] Number of CCalls: %d\n", num_ccalls);
+  fprintf(stderr, "[stat] Number of CHERI sandboxes: %d\n", num_sandboxes);
+  fprintf(stderr, "[stat] Number of Capsicum sandboxes: %d\n", num_capsicum_sandboxes);
+  fprintf(stderr, "[stat] Number of Capsicum host RPCs: %d\n", num_capsicum_host_rpcs);
 #endif /* SB_COLLECT_STATS */
 
 	exit(exit_value);

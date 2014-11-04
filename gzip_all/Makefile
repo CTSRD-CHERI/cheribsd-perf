@@ -212,5 +212,5 @@ pull-results:
 		cp post_process.sh results/
 		cd results && \
 		$(CHERI_PULL) && \
-		./post_process.sh
+		./post_process.sh all
 
