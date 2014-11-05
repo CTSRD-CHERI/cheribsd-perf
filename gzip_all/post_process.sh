@@ -1,35 +1,59 @@
 extract_avg ()
 {
-  # ministat-format dependent:
-  avg_field=6
-  avg_value=`tail -n 1 ${stat_file} | awk '{print $avg_field;}' avg_field=$avg_field`
+  if [ $nruns -lt 3 ]
+  then
+    avg_value=`cat $stat_file`
+  else
+    # ministat-format dependent:
+    avg_field=6
+    avg_value=`tail -n 1 $stat_file | awk '{print $avg_field;}' avg_field=$avg_field`
+  fi
+}
+
+run_ministat ()
+{
+  if [ $nruns -lt 3 ]
+  then
+    cat tmp | awk '{print $1}' > $stat_file
+  else
+    cat tmp | ministat -n > $stat_file
+  fi
 }
 
 extract_stats ()
 {
+  nruns=`cat $file | sed "s/^\[stat\].*$//g" | sed "/^$/d" | wc -l | tr -d " "`
+
   # find average time taken
   stat_file=stat-${filep}_time
-  cat $file | sed "s/^\[stat\].*$//g" | ministat -n > $stat_file
+  cat $file | sed "s/^\[stat\].*$//g" > tmp
+  run_ministat
   extract_avg
   avg_time=$avg_value
 
   # find average number of ccalls
   stat_file=stat-${filep}_ccalls
-  cat $file | grep "^\[stat\] Number of CCalls" | awk '{print $NF;}' | ministat -n > $stat_file
+  cat $file | grep "^\[stat\] Number of CCalls" | awk '{print $NF;}' > tmp
+  run_ministat
   extract_avg
   avg_ccalls=$avg_value
   
   # find average number of CHERI sandbox creations
   stat_file=stat-${filep}_cheri_sandboxes
-  cat $file | grep "^\[stat\] Number of CHERI sandboxes" | awk '{print $NF;}' | ministat -n > $stat_file
+  cat $file | grep "^\[stat\] Number of CHERI sandboxes" | awk '{print $NF;}' > tmp
+  run_ministat
   extract_avg
   avg_cheri_sandboxes=$avg_value
   
   # find average number of Capsicum host RPCs
   stat_file=stat-${filep}_capsicum_host_rpcs
-  cat $file | grep "^\[stat\] Number of Capsicum host RPCs" | awk '{print $NF;}' | ministat -n > $stat_file
+  cat $file | grep "^\[stat\] Number of Capsicum host RPCs" | awk '{print $NF;}' > tmp
+  run_ministat
   extract_avg
   avg_capsicum_host_rpcs=$avg_value
+
+  # extract the BUFLEN used
+  BUFLEN=`cat $file | grep "^\[stat\] BUFLEN" | awk '{print $NF;}'`
 }
 
 append_curve ()
@@ -41,18 +65,12 @@ append_curve ()
 
 process_file ()
 {
-  # filename is of the form results-<prefix>-<implementation>-<number of bytes>
+  # filename is of the form results-<prefix>-<implementation>-<outer loop variable>-<inner loop variable>
   # any of these might also usefully be an x_var
   impl=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $2}'`
-  bytes=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $3}'`
-  nfiles=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $4}'`
+  x_outer=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $3}'`
+  x_inner=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $4}'`
   filep=`echo $file | sed s/^results-//g`
-  if [ $bytes -lt $minbytes ] ; then
-    minbytes=$bytes
-  fi
-  if [ $bytes -gt $maxbytes ] ; then
-    maxbytes=$bytes
-  fi
   extract_stats
   append_curve
 }
@@ -62,7 +80,7 @@ generate_graph ()
   cat <<EOF >plot-$prefix-$y_var.plot
 set terminal png size 1024,800
 set output 'output-$prefix-$y_var.png'
-set title "$title"
+set title "$title (averaged over $nruns runs)"
 set xlabel "$xlabel"
 set ylabel "$ylabel"
 plot \\
@@ -84,7 +102,9 @@ display_graph ()
 
 process_files ()
 {
-  for file in `ls -1 | grep results-$prefix-.*$filter_sz$filter_nfiles`
+  FILES=`ls -1 | grep "results-$prefix-[^-]*$filter_outer$filter_inner"`
+  NFILES=`echo $FILES | wc -w | tr -d " "`
+  for file in $FILES
   do
     echo Processing $file ...
     process_file $file
@@ -106,50 +126,61 @@ clean ()
 # title: graph title
 process_test ()
 {
-  minbytes=9999999999999
-  maxbytes=0
-  minfiles=9999999999999
-  maxfiles=0
   process_files
+if [ $NFILES -ne 0 ]
+then
   generate_graph
   display_graph
+fi
 }
 
 process_tests ()
 {
-  filter_nfiles=
-  filter_sz=-64
-  prefix=sb_create_test
-  y_var=avg_time
-  x_var=nfiles
-  xlabel="total number of files of size $filter_sz bytes"
+  filter_inner=
+  sz=500000
+  filter_outer=-$sz
+  prefix=buflen_test
+  y_var=avg_ccalls
+  x_var=BUFLEN
+  xlabel="buffer size"
   ylabel="total time (seconds)"
-  title="compression time for files consecutively (averaged over 3 runs)"
+  title="compression time for file of size $sz with varying buffer size"
   process_test
   
-  x_var=bytes
-  filter_nfiles=
-  filter_sz=
+  filter_inner=
+  sz=65536
+  filter_outer=-$sz
+  prefix=sb_create_test
+  y_var=avg_time
+  x_var=x_inner
+  xlabel="total number of files of size $sz bytes"
+  ylabel="total time (seconds)"
+  title="compression time for files consecutively"
+  process_test
+  
+  x_var=x_outer
+  filter_inner=
+  filter_outer=
   prefix=compress_time_test
   y_var=avg_time
   xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
   ylabel="total time (seconds)"
-  title="compression time for 3 files (averaged over 3 runs)"
+  title="compression time for 3 files"
   process_test
 
   y_var=avg_ccalls
   ylabel="number of CCalls"
-  title="number of CCalls for 3 files compressed consecutively (averaged over 3 runs)"
+  title="number of CCalls for 3 files compressed consecutively"
   process_test
   
   y_var=avg_cheri_sandboxes
   ylabel="number of CHERI sandboxes"
-  title="number of CHERI sandboxes for 3 files compressed consecutively (averaged over 3 runs)"
+  title="number of CHERI sandboxes for 3 files compressed consecutively"
   process_test
   
   y_var=avg_capsicum_host_rpcs
   ylabel="number of Capsicum host RPCs"
-  title="number of Capsicum host RPCs for 3 files compressed consecutively (averaged over 3 runs)"
+  title="number of Capsicum host RPCs for 3 files compressed consecutively"
   process_test
 }
 

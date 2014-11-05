@@ -62,6 +62,9 @@ gzsandbox_initialize(void)
   params.nflag = nflag;
   params.qflag = qflag;
   params.tflag = tflag;
+#ifdef DYNAMIC_BUFLEN
+  params.BUFLEN = BUFLEN;
+#endif /* DYNAMIC_BUFLEN */
 
 #ifdef SB_COLLECT_STATS
   num_ccalls++;

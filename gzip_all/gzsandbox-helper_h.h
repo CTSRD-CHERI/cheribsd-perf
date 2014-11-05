@@ -30,6 +30,9 @@ struct gz_init_params
   int nflag;
   int qflag;
   int tflag;
+#ifdef DYNAMIC_BUFLEN
+  size_t BUFLEN;
+#endif /* DYNAMIC_BUFLEN */
 };
 
 #endif /* !_GZSANDBOX_HELPER_H_ */

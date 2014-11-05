@@ -46,6 +46,10 @@ extern int qflag;
 extern int tflag;
 #endif /* SB_GZIP_LIBCHERI */
 
+#ifdef DYNAMIC_BUFLEN
+extern size_t BUFLEN;
+#endif /* DYNAMIC_BUFLEN */
+
 off_t	gz_compress(int in, int out, off_t *gsizep, const char *origname,
 	    uint32_t mtime);
 off_t	gz_compress_wrapper(int in, int out, off_t *gsizep,

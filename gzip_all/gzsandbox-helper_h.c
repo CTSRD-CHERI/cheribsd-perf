@@ -22,7 +22,12 @@ extern __capability void	*cheri_system_type;
 
 #include "gzsandbox-helper_h.h"
 
+#ifdef DYNAMIC_BUFLEN
+static size_t BUFLEN;
+#else /* DYNAMIC_BUFLEN */
 #define BUFLEN		(64 * 1024)
+#endif /* DYNAMIC_BUFLEN */
+
 #define GZIP_MAGIC0	0x1F
 #define GZIP_MAGIC1	0x8B
 #define GZIP_OMAGIC1	0x9E
@@ -188,6 +193,9 @@ invoke(register_t op,
       nflag = params->nflag;
       qflag = params->qflag;
       tflag = params->tflag;
+#ifdef DYNAMIC_BUFLEN
+      BUFLEN = params->BUFLEN;
+#endif /* DYNAMIC_BUFLEN */
 #ifdef SB_COLLECT_STATS
       num_ccalls = param_num_ccalls;
 #endif /* SB_COLLECT_STATS */

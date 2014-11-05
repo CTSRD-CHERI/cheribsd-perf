@@ -1,0 +1,35 @@
+Cases:
+1. Varying the buffer size going in/out of zlib.
+    Test cases:
+      gzip_u
+      gzip_u_libz_h1
+    Test name: buflen_test
+    Constant: num files, file size
+    Vary: buffer size
+
+2. Message passing: send bytes over socket/pipe vs send bytes over CCall
+    Test cases:
+      gzip_u
+      gzip_u_libz_a
+      gzip_u_libz_h1
+    Test name: compression_time_test
+    Constant: num files, buffer size
+    Vary: file size
+
+3. Sandbox creation overhead
+    Test cases:
+      gzip_u_libz_h1
+      gzip_u_libz_hm
+    Test name: sb_create_test
+    Constant: buffer size, file size
+    Vary: num files
+
+4. Capability overhead
+    Test cases:
+      gzip_u
+      gzip_u_libz_c
+      gzip_a
+      gzip_a_libz_c
+    Test name: compression_time_test
+    Constant: num files, buffer size
+    Vary: file size
