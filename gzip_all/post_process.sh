@@ -34,15 +34,18 @@ extract_stats ()
 
 append_curve ()
 {
-  tmp_ref=\$$stat_ref
-  echo $bytes `eval echo $tmp_ref` >> data-$prefix-$stat_ref-$impl
+  y_ref=\$$y_var
+  x_ref=\$$x_var
+  echo `eval echo $x_ref` `eval echo $y_ref` >> data-$prefix-$y_var-$impl
 }
 
 process_file ()
 {
   # filename is of the form results-<prefix>-<implementation>-<number of bytes>
+  # any of these might also usefully be an x_var
   impl=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $2}'`
   bytes=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $3}'`
+  nfiles=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $4}'`
   filep=`echo $file | sed s/^results-//g`
   if [ $bytes -lt $minbytes ] ; then
     minbytes=$bytes
@@ -56,32 +59,32 @@ process_file ()
 
 generate_graph ()
 {
-  cat <<EOF >plot-$prefix-$stat_ref.plot
+  cat <<EOF >plot-$prefix-$y_var.plot
 set terminal png size 1024,800
-set output 'output-$prefix-$stat_ref.png'
+set output 'output-$prefix-$y_var.png'
 set title "$title"
 set xlabel "$xlabel"
 set ylabel "$ylabel"
 plot \\
 EOF
-  for file in data-$prefix-$stat_ref-*
+  for file in data-$prefix-$y_var-*
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
     #echo "'$file' with linespoints title '$file',\\" >> graph.plot
-    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot-$prefix-$stat_ref.plot
+    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot-$prefix-$y_var.plot
   done
-  gnuplot plot-$prefix-$stat_ref.plot
+  gnuplot plot-$prefix-$y_var.plot
 }
 
 display_graph ()
 {
-  sxiv output-$prefix-$stat_ref.png &
+  sxiv output-$prefix-$y_var.png &
 }
 
 process_files ()
 {
-  for file in results-$prefix-*
+  for file in `ls -1 | grep results-$prefix-.*$filter_sz$filter_nfiles`
   do
     echo Processing $file ...
     process_file $file
@@ -96,7 +99,7 @@ clean ()
 # Call this with the following variables set appropriately:
 # prefix: the name of the test (see process_file for what the prefix
 #         represents)
-# stat_ref: the statistic to be plotted (see extract_stats for valid
+# y_var: the statistic to be plotted (see extract_stats for valid
 #           statistics)
 # xlabel: x-axis label
 # ylabel: y-axis label
@@ -105,6 +108,8 @@ process_test ()
 {
   minbytes=9999999999999
   maxbytes=0
+  minfiles=9999999999999
+  maxfiles=0
   process_files
   generate_graph
   display_graph
@@ -112,31 +117,37 @@ process_test ()
 
 process_tests ()
 {
+  filter_nfiles=
+  filter_sz=-64
+  prefix=sb_create_test
+  y_var=avg_time
+  x_var=nfiles
+  xlabel="total number of files of size $filter_sz bytes"
+  ylabel="total time (seconds)"
+  title="compression time for files consecutively (averaged over 3 runs)"
+  process_test
+  
+  x_var=bytes
+  filter_nfiles=
+  filter_sz=
   prefix=compress_time_test
-  stat_ref=avg_time
+  y_var=avg_time
   xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
   ylabel="total time (seconds)"
   title="compression time for 3 files (averaged over 3 runs)"
   process_test
 
-  prefix=sb_create_test
-  stat_ref=avg_time
-  xlabel="consecutive bytes of /dev/random, /dev/zero, b64encode /dev/random"
-  ylabel="total time (seconds)"
-  title="compression time for 3 files consecutively (averaged over 3 runs)"
-  process_test
-  
-  stat_ref=avg_ccalls
+  y_var=avg_ccalls
   ylabel="number of CCalls"
   title="number of CCalls for 3 files compressed consecutively (averaged over 3 runs)"
   process_test
   
-  stat_ref=avg_cheri_sandboxes
+  y_var=avg_cheri_sandboxes
   ylabel="number of CHERI sandboxes"
   title="number of CHERI sandboxes for 3 files compressed consecutively (averaged over 3 runs)"
   process_test
   
-  stat_ref=avg_capsicum_host_rpcs
+  y_var=avg_capsicum_host_rpcs
   ylabel="number of Capsicum host RPCs"
   title="number of Capsicum host RPCs for 3 files compressed consecutively (averaged over 3 runs)"
   process_test

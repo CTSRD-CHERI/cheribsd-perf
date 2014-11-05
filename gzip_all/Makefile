@@ -6,6 +6,9 @@ OPTCFLAGS+=-DSB_COLLECT_STATS
 
 CFLAGS+=$(OPTCFLAGS)
 
+# allows specifying BUFLEN by -B option
+CFLAGS+=-DDYNAMIC_BUFLEN
+
 GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\" -I../libz_all/
 GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/ -I../libz_all/
 GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI -I../libz_all/

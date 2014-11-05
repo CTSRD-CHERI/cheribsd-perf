@@ -131,7 +131,11 @@ enum filetype {
 
 #define GZ_SUFFIX	".gz"
 
+#ifdef DYNAMIC_BUFLEN
+size_t BUFLEN;
+#else /* DYNAMIC_BUFLEN */
 #define BUFLEN		(64 * 1024)
+#endif /* DYNAMIC_BUFLEN */
 
 #define GZIP_MAGIC0	0x1F
 #define GZIP_MAGIC1	0x8B
@@ -356,6 +360,11 @@ main(int argc, char **argv)
 #endif
 	int ch;
 
+#ifdef DYNAMIC_BUFLEN
+  /* could initialize to (64 * 1024), but this will catch bugs */
+  BUFLEN = 0;
+#endif /* DYNAMIC_BUFLEN */
+
 #ifdef SB_COLLECT_STATS
   num_ccalls = 0;
   num_sandboxes = 0;
@@ -382,7 +391,11 @@ main(int argc, char **argv)
 #ifdef SMALL
 #define OPT_LIST "123456789cdhlV"
 #else
+#ifdef DYNAMIC_BUFLEN
+#define OPT_LIST "123456789B:acdfhklLNnqrS:tVv"
+#else /* DYNAMIC_BUFLEN */
 #define OPT_LIST "123456789acdfhklLNnqrS:tVv"
+#endif /* DYNAMIC_BUFLEN */
 #endif
 
 	while ((ch = getopt_long(argc, argv, OPT_LIST, longopts, NULL)) != -1) {
@@ -392,6 +405,11 @@ main(int argc, char **argv)
 		case '7': case '8': case '9':
 			numflag = ch - '0';
 			break;
+#ifdef DYNAMIC_BUFLEN
+    case 'B':
+      BUFLEN = atoi(optarg);
+      break;
+#endif /* DYNAMIC_BUFLEN */
 		case 'c':
 			cflag = 1;
 			break;
@@ -481,6 +499,7 @@ main(int argc, char **argv)
   fprintf(stderr, "[stat] Number of CHERI sandboxes: %d\n", num_sandboxes);
   fprintf(stderr, "[stat] Number of Capsicum sandboxes: %d\n", num_capsicum_sandboxes);
   fprintf(stderr, "[stat] Number of Capsicum host RPCs: %d\n", num_capsicum_host_rpcs);
+  fprintf(stderr, "[stat] BUFLEN: %zu\n", BUFLEN);
 #endif /* SB_COLLECT_STATS */
 
 	exit(exit_value);

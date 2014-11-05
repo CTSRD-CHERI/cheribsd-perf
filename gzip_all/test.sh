@@ -1,11 +1,11 @@
 nrun=3
 #SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
-SIZES="64 256 512 4096 16384 65536 500000 1000000"
+SIZES="64 4096 65536 500000 1000000"
 MAXSIZE=50000000
 BS=$MAXSIZE
 
 # for sb_create_test:
-NFILES="1 2 5"
+NFILES="1 2 5 10"
 SB_CREATE_FIXED_SIZE=500000
 ZERO="0"
 
@@ -28,18 +28,19 @@ prun ()
 check_results ()
 {
   # only show errors:
-  cat results-$func-$b-$sz | grep -v ".*real.*user.*sys$\|^\[stat\]"
+  cat $results_file | grep -v ".*real.*user.*sys$\|^\[stat\]"
   rc=$?
   if [ $rc -eq 0 ]
   then
-    echo "*****FAILED: $@ (file: results-$func-$b-$sz)-----"
+    echo "*****FAILED: $@ (file: $results_file)-----"
   fi
 }
 
 DESC_compress_time_test="tests compression time"
 compress_time_test ()
 {
-  cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>results-$func-$b-$sz
+  results_file=results-$func-$b-$sz
+  cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>$results_file
   check_results
 }
 gen_compress_time_file_list ()
@@ -53,18 +54,18 @@ init_compress_time_test ()
 DESC_sb_create_test="tests sandbox creation overhead"
 sb_create_test ()
 {
+  results_file=results-$func-$b-$sz-$nfiles
   cat file_list | xargs echo "$1 -c"
-  cat file_list | time xargs $1 -c 1>/dev/null 2>>results-$func-$b-$sz-$nfiles
+  cat file_list | time xargs $1 -c 1>/dev/null 2>>$results_file
   check_results
 }
 gen_sb_create_file_list ()
 {
-  # note: sz is not file size, but num files
   rm -f file_list
   i=0
   while [ $i -lt $nfiles ]
   do
-    echo -e "ZERO-$sz\nRANDOM-$sz\nENTROPY-$sz\n" >> file_list
+    echo -e "DATA-$sz\n" >> file_list
     i=`expr $i + 1`
   done
 }
@@ -130,13 +131,17 @@ generate ()
     prun dd if=ZERO of=ZERO-$sz bs=$sz count=1
     prun dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
     prun dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
+    szdiv3=`expr $sz / 3`
+    dd if=ZERO bs=$szdiv3 count=1 > DATA-$sz
+    dd if=RANDOM bs=$szdiv3 count=1 >> DATA-$sz
+    dd if=ENTROPY bs=$szdiv3 count=1 >> DATA-$sz
   done
 }
 
 clean ()
 {
-  prun rm -f ZERO-* RANDOM-* ENTROPY-*
-  prun rm -f file_list results*
+  prun rm -f ZERO-* RANDOM-* ENTROPY-* DATA-*
+  prun rm -f file_list results* hashes* failures
 }
 
 runtest ()
@@ -183,7 +188,7 @@ runtests ()
   #runtest compress_verify_test init_compress_verify_test gen_compress_verify_file_list SIZES bytes ZERO
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO
-  echo failures
+  cat failures
 }
 
 push ()
