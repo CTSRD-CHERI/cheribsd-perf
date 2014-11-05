@@ -6,6 +6,8 @@ Cases:
     Test name: buflen_test
     Constant: num files, file size
     Vary: buffer size
+    X-axis: buffer size
+    Y-axis: time
 
 2. Message passing: send bytes over socket/pipe vs send bytes over CCall
     Test cases:
@@ -15,6 +17,8 @@ Cases:
     Test name: compression_time_test
     Constant: num files, buffer size
     Vary: file size
+    X-axis: file size
+    Y-axis: time
 
 3. Sandbox creation overhead
     Test cases:
@@ -23,6 +27,8 @@ Cases:
     Test name: sb_create_test
     Constant: buffer size, file size
     Vary: num files
+    X-axis: num files
+    Y-axis: time
 
 4. Capability overhead
     Test cases:
@@ -33,3 +39,6 @@ Cases:
     Test name: compression_time_test
     Constant: num files, buffer size
     Vary: file size
+    X-axis: num files
+    Y-axis: time
+

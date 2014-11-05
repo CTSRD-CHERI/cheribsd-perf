@@ -46,7 +46,7 @@ compress_time_test ()
 {
   sz=$outer_var
   results_file=results$CASE-$func-$b-$sz
-  cat file_list | time xargs -n 1 $1 -c 1>/dev/null 2>>$results_file
+  cat file_list | time xargs -n 1 $1 -B65536 -c 1>/dev/null 2>>$results_file
   check_results
 }
 gen_compress_time_file_list ()
@@ -63,8 +63,8 @@ sb_create_test ()
 {
   sz=$outer_var
   results_file=results$CASE-$func-$b-$sz-$nfiles
-  cat file_list | xargs echo "$1 -c"
-  cat file_list | time xargs $1 -c 1>/dev/null 2>>$results_file
+  cat file_list | xargs echo "$1 -B65536 -c"
+  cat file_list | time xargs $1 -B65536 -c 1>/dev/null 2>>$results_file
   check_results
 }
 gen_sb_create_file_list ()
@@ -109,7 +109,7 @@ compress_verify_test ()
 {
   sz=$outer_var
   rm -f ZERO-$sz.gz RANDOM-$sz.gz ENTROPY-$sz.gz
-  cat file_list | xargs -n 1 $1 -k 2>>results$CASE-$func-$b-$sz
+  cat file_list | xargs -n 1 $1 -B65536 -k 2>>results$CASE-$func-$b-$sz
   sha1 ZERO-$sz.gz RANDOM-$sz.gz ENTROPY-$sz.gz > hashes-$b-$sz
   diff hashes-$sz hashes-$b-$sz
   rc=$?

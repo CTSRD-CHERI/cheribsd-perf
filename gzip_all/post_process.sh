@@ -65,12 +65,12 @@ append_curve ()
 
 process_file ()
 {
-  # filename is of the form results-<prefix>-<implementation>-<outer loop variable>-<inner loop variable>
+  # filename is of the form results<case>-<prefix>-<implementation>-<outer loop variable>-<inner loop variable>
   # any of these might also usefully be an x_var
-  impl=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $2}'`
-  x_outer=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $3}'`
-  x_inner=`echo $file | sed s/^results-$prefix-/results-/g | awk -F"-" '{print $4}'`
-  filep=`echo $file | sed s/^results-//g`
+  impl=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $2}'`
+  x_outer=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $3}'`
+  x_inner=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $4}'`
+  filep=`echo $file | sed s/^results$CASE-//g`
   extract_stats
   append_curve
 }
@@ -102,7 +102,7 @@ display_graph ()
 
 process_files ()
 {
-  FILES=`ls -1 | grep "results-$prefix-[^-]*$filter_outer$filter_inner"`
+  FILES=`ls -1 | grep "results$CASE-$prefix-[^-]*$filter_outer$filter_inner"`
   NFILES=`echo $FILES | wc -w | tr -d " "`
   for file in $FILES
   do
@@ -113,7 +113,7 @@ process_files ()
 
 clean ()
 {
-  rm -f results-* data-* stat-* *.plot *.png
+  rm -f results*-* data-* stat-* *.plot *.png
 }
 
 # Call this with the following variables set appropriately:
@@ -140,7 +140,7 @@ process_tests ()
   sz=500000
   filter_outer=-$sz
   prefix=buflen_test
-  y_var=avg_ccalls
+  y_var=avg_time
   x_var=BUFLEN
   xlabel="buffer size"
   ylabel="total time (seconds)"
@@ -186,6 +186,7 @@ process_tests ()
 
 all ()
 {
+CASE=1
   clean
   tar xf results.tar
   process_tests
