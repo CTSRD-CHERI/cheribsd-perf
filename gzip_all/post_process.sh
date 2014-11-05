@@ -8,22 +8,28 @@ extract_avg ()
 extract_stats ()
 {
   # find average time taken
-  stat_file=stat-${file_p}_time
+  stat_file=stat-${filep}_time
   cat $file | sed "s/^\[stat\].*$//g" | ministat -n > $stat_file
   extract_avg
   avg_time=$avg_value
 
   # find average number of ccalls
-  stat_file=stat-${file_p}_ccalls
+  stat_file=stat-${filep}_ccalls
   cat $file | grep "^\[stat\] Number of CCalls" | awk '{print $NF;}' | ministat -n > $stat_file
   extract_avg
   avg_ccalls=$avg_value
   
   # find average number of CHERI sandbox creations
-  stat_file=stat-${file_p}_cheri_sandboxes
+  stat_file=stat-${filep}_cheri_sandboxes
   cat $file | grep "^\[stat\] Number of CHERI sandboxes" | awk '{print $NF;}' | ministat -n > $stat_file
   extract_avg
   avg_cheri_sandboxes=$avg_value
+  
+  # find average number of Capsicum host RPCs
+  stat_file=stat-${filep}_capsicum_host_rpcs
+  cat $file | grep "^\[stat\] Number of Capsicum host RPCs" | awk '{print $NF;}' | ministat -n > $stat_file
+  extract_avg
+  avg_capsicum_host_rpcs=$avg_value
 }
 
 append_curve ()
@@ -51,7 +57,7 @@ process_file ()
 generate_graph ()
 {
   cat <<EOF >plot-$prefix-$stat_ref.plot
-set terminal png size 640,480
+set terminal png size 1024,800
 set output 'output-$prefix-$stat_ref.png'
 set title "$title"
 set xlabel "$xlabel"
@@ -106,6 +112,13 @@ process_test ()
 
 process_tests ()
 {
+  prefix=compress_time_test
+  stat_ref=avg_time
+  xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
+  ylabel="total time (seconds)"
+  title="compression time for 3 files (averaged over 3 runs)"
+  process_test
+
   prefix=sb_create_test
   stat_ref=avg_time
   xlabel="consecutive bytes of /dev/random, /dev/zero, b64encode /dev/random"
@@ -123,11 +136,9 @@ process_tests ()
   title="number of CHERI sandboxes for 3 files compressed consecutively (averaged over 3 runs)"
   process_test
   
-  prefix=compress_time_test
-  stat_ref=avg_time
-  xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
-  ylabel="total time (seconds)"
-  title="compression time for 3 files (averaged over 3 runs)"
+  stat_ref=avg_capsicum_host_rpcs
+  ylabel="number of Capsicum host RPCs"
+  title="number of Capsicum host RPCs for 3 files compressed consecutively (averaged over 3 runs)"
   process_test
 }
 
