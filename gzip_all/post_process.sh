@@ -14,7 +14,7 @@ run_ministat ()
 {
   if [ $nruns -lt 3 ]
   then
-    cat tmp | awk '{print $1}' > $stat_file
+    cat tmp | head -n 1 | awk '{print $1}' > $stat_file
   else
     cat tmp | ministat -n > $stat_file
   fi
@@ -26,7 +26,7 @@ extract_stats ()
 
   # find average time taken
   stat_file=stat$CASE-${filep}_time
-  cat $file | sed "s/^\[stat\].*$//g" > tmp
+  cat $file | sed "s/^\[stat\].*$//g" | sed "/^$/d" > tmp
   run_ministat
   extract_avg
   avg_time=$avg_value
@@ -52,15 +52,17 @@ extract_stats ()
   extract_avg
   avg_capsicum_host_rpcs=$avg_value
 
+  avg_ccall_plus_rpc=`expr $avg_ccalls + $avg_capsicum_host_rpcs`
+
   # extract the BUFLEN used
-  BUFLEN=`cat $file | grep "^\[stat\] BUFLEN" | awk '{print $NF;}'`
+  BUFLEN=`cat $file | grep "^\[stat\] BUFLEN" | head -n 1 | awk '{print $NF;}'`
 }
 
 append_curve ()
 {
   y_ref=\$$y_var
   x_ref=\$$x_var
-  echo `eval echo $x_ref` `eval echo $y_ref` >> data$CASE-$prefix-$y_var-$impl
+  echo `eval echo $x_ref` `eval echo $y_ref` >> data$CASE-$prefix-$y_var-$impl$filter_outer$filter_inner
 }
 
 process_file ()
@@ -85,7 +87,9 @@ set xlabel "$xlabel"
 set ylabel "$ylabel"
 plot \\
 EOF
-  for file in data$CASE-$prefix-$y_var-*
+  FILES=`ls -1 | grep "data$CASE-$prefix-$y_var-[^-]*$filter_outer$filter_inner"`
+  for file in $FILES
+
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
@@ -118,8 +122,9 @@ clean ()
 # Call this with the following variables set appropriately:
 # prefix: the name of the test (see process_file for what the prefix
 #         represents)
-# y_var: the statistic to be plotted (see extract_stats for valid
-#           statistics)
+# x_var: reference to the variable to plot on the x-axis
+# y_var: reference to the statistic to be plotted (see extract_stats
+#        for valid statistics)
 # xlabel: x-axis label
 # ylabel: y-axis label
 # title: graph title
@@ -158,17 +163,24 @@ process_tests ()
   title="CASE $CASE: CCall vs RPC: compression time for 3 files (individually)"
   process_test
   
+  y_var=avg_ccall_plus_rpc
+  ylabel="number of CCalls + RPCs"
+  title="CASE $CASE: CCall vs RPC: number of CCalls + RPCs for 3 files (individually)"
+  process_test
+  
   CASE=3
   filter_inner=
-  sz=500000
-  filter_outer=-$sz
   prefix=sb_create_test
   y_var=avg_time
   x_var=x_inner
   xlabel="number of files"
   ylabel="total time (seconds)"
-  title="CASE $CASE: sandbox creation overhead: compression time for files of size $sz (consecutively)"
-  process_test
+  for sz in 4096 65536 500000
+  do
+    filter_outer=-$sz
+    title="CASE $CASE: sandbox creation overhead: compression time for files of size $sz (consecutively)"
+    process_test
+  done
   
   CASE=4
   filter_inner=

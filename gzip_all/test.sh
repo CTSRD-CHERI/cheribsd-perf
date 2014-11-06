@@ -7,7 +7,6 @@ BS=$MAXSIZE
 
 # for sb_create_test:
 NFILES="1 2 5 10"
-SB_CREATE_FIXED_SIZE=500000
 ZERO="0"
 
 # for buflen_test:
@@ -56,6 +55,7 @@ gen_compress_time_file_list ()
 }
 init_compress_time_test ()
 {
+  generate
 }
 
 DESC_sb_create_test="tests sandbox creation overhead"
@@ -81,6 +81,7 @@ gen_sb_create_file_list ()
 }
 init_sb_create_test ()
 {
+  generate
 }
 
 DESC_buflen_test="tests varying buffer size"
@@ -102,6 +103,7 @@ gen_buflen_file_list ()
 }
 init_buflen_test ()
 {
+  generate
 }
 
 DESC_compress_verify_test="tests compression correctness"
@@ -130,6 +132,7 @@ gen_compress_verify_file_list ()
 }
 init_compress_verify_test ()
 {
+  generate
 }
 
 # define the function to call for each test in $func
@@ -140,7 +143,7 @@ dotestn ()
   j=0
   while [ $j -ne $2 ]
   do
-    echo "---$func--- `expr $j + 1`/$2 runs for $1 ($outer_var $outer_loop_unit)"
+    echo "---$func--- `expr $j + 1`/$2 runs for $1 ($outer_var $outer_loop_unit; $inner_var $inner_loop_unit)"
     $func $1 $desc
     j=`expr $j + 1`
   done
@@ -159,7 +162,7 @@ generate ()
 {
   # the files RANDOM, ZERO and ENTROPY should contain sensible data
   # the following files are automatically generated from them
-  for sz in $SIZES $SB_CREATE_FIXED_SIZE
+  for sz in $SIZES
   do
     prun dd if=ZERO of=ZERO-$sz bs=$sz count=1
     prun dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
@@ -177,6 +180,41 @@ clean ()
   prun rm -f file_list results* hashes* failures
 }
 
+cleancase ()
+{
+  if [ ! -n "$CASE" ]
+  then
+    echo no case
+  else
+    prun rm -f file_list results$CASE* hashes$CASE* failures
+  fi
+}
+
+# runtest runs 3-level-deep nested loop. The outermost loop iterates 
+# over outer_loop_array. The next inner loop iterates over
+# inner_loop_array. The innermost loop iterates over each test
+# program. runtest itself does not run the tests directly: dotestn
+# does that. However, parameters to control dotestn are required.
+#
+# Note that dotestn itself runs another loop, $nrun many times, for
+# the final averaging process.
+#
+# So in total, the nesting is 4 levels deep.
+#
+# Parameters:
+#
+# $1: test_func: the function to call at the very innermost loop in
+#     dotestn.
+# $2: test_input_init_func: the function to call to initialize the
+#     test. This is called exactly once, before the main loop.
+# $3: test_input_gen_func: the function to call at each iteration of
+#     inner_loop_array.
+# $4: outer_loop_array_ref: the name of the variable containing the
+#     items to iterate over in the outer loop.
+# $5: outer_loop_unit: the units of the elements in outer_loop_array.
+# $6: inner_loop_array_ref: the name of the variable containing the
+#     items to iterate over in the inner loop.
+# $7: inner_loop_unit: the units of the elements in inner_loop_array.
 runtest ()
 {
   i=1
@@ -206,10 +244,7 @@ runtest ()
     for inner_var in $inner_loop_array
     do
       inner_counter=`expr $inner_counter + 1`
-      if [ $inner_var -ne 0 ]
-      then
-        echo "(inner: $inner_var $inner_loop_unit)"
-      fi
+      echo "! inner: $inner_counter / $inner_max outer: $outer_counter / $outer_max"
       $test_input_gen_func
       cat file_list
       for prog in $PROGS
@@ -218,10 +253,81 @@ runtest ()
         desc=`eval echo $desc_ref`
         dotestn ./$prog $nrun
       done
-      echo "! inner: $inner_counter / $inner_max outer: $outer_counter / $outer_max"
     done
     echo "---------END RUN ($outer_var $outer_loop_unit) --------"
   done
+}
+
+case1 ()
+{
+  # perfnotes3: case 1
+  CASE=1
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="4096 65536 500000"
+    BUFLENS="4096 65536 131072"
+    PROGS="gzip_u gzip_u_libz_h1"
+  else
+    nrun=3
+    SIZES="500000"
+    BUFLENS="64 128 256 512 1024 2048 4096 8192 16384 32768 65536 131072 1000000"
+    PROGS="gzip_u gzip_u_libz_h1"
+  fi
+  runtest buflen_test init_buflen_test gen_buflen_file_list SIZES bytes BUFLENS bytes
+}
+
+case2 ()
+{
+  # perfnotes3: case 2
+  CASE=2
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="4096 65536 500000"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a"
+  else
+    nrun=3
+    SIZES="4096 32768 60000 65536 70000 131072 500000 1000000"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a"
+  fi
+  runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
+}
+
+case3 ()
+{
+  # perfnotes3: case 3
+  CASE=3
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="500000"
+    NFILES="1 5 10"
+    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
+  else
+    nrun=3
+    SIZES="4096 65536 500000"
+    NFILES="1 2 5 10 15"
+    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
+  fi
+  runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
+}
+
+case4 ()
+{
+  # perfnotes3: case 4
+  CASE=4
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="4096 65536 500000"
+    PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
+  else
+    nrun=3
+    SIZES="4096 32768 60000 65536 70000 131072 500000 1000000"
+    PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
+  fi
+  runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }
 
 runtests ()
@@ -232,32 +338,13 @@ runtests ()
   #runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
   #runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 
-  # perfnotes3: case 1
-  SIZES="4096 65536 500000"
-  BUFLENS="4096 65536 131072"
-  PROGS="gzip_u gzip_u_libz_h1"
-  CASE=1
-  runtest buflen_test init_buflen_test gen_buflen_file_list SIZES bytes BUFLENS bytes
+  LONG_RUN=1
 
-  # perfnotes3: case 2
-  SIZES="4096 65536 500000"
-  PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a"
-  CASE=2
-  runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
+  case1
+  case2
+  case3
+  case4
   
-  # perfnotes3: case 3
-  SIZES="500000"
-  NFILES="1 5 10"
-  PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
-  CASE=3
-  runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
-  
-  # perfnotes3: case 4
-  SIZES="4096 65536 500000"
-  PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
-  CASE=4
-  runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
-
   cat failures
 }
 
