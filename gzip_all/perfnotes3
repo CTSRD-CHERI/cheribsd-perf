@@ -14,7 +14,7 @@ Cases:
       gzip_u
       gzip_u_libz_a
       gzip_u_libz_h1
-    Test name: compression_time_test
+    Test name: compress_time_test
     Constant: num files, buffer size
     Vary: file size
     X-axis: file size
@@ -36,9 +36,9 @@ Cases:
       gzip_u_libz_c
       gzip_a
       gzip_a_libz_c
-    Test name: compression_time_test
+    Test name: compress_time_test
     Constant: num files, buffer size
     Vary: file size
-    X-axis: num files
+    X-axis: file size
     Y-axis: time
 

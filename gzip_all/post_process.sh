@@ -25,28 +25,28 @@ extract_stats ()
   nruns=`cat $file | sed "s/^\[stat\].*$//g" | sed "/^$/d" | wc -l | tr -d " "`
 
   # find average time taken
-  stat_file=stat-${filep}_time
+  stat_file=stat$CASE-${filep}_time
   cat $file | sed "s/^\[stat\].*$//g" > tmp
   run_ministat
   extract_avg
   avg_time=$avg_value
 
   # find average number of ccalls
-  stat_file=stat-${filep}_ccalls
+  stat_file=stat$CASE-${filep}_ccalls
   cat $file | grep "^\[stat\] Number of CCalls" | awk '{print $NF;}' > tmp
   run_ministat
   extract_avg
   avg_ccalls=$avg_value
   
   # find average number of CHERI sandbox creations
-  stat_file=stat-${filep}_cheri_sandboxes
+  stat_file=stat$CASE-${filep}_cheri_sandboxes
   cat $file | grep "^\[stat\] Number of CHERI sandboxes" | awk '{print $NF;}' > tmp
   run_ministat
   extract_avg
   avg_cheri_sandboxes=$avg_value
   
   # find average number of Capsicum host RPCs
-  stat_file=stat-${filep}_capsicum_host_rpcs
+  stat_file=stat$CASE-${filep}_capsicum_host_rpcs
   cat $file | grep "^\[stat\] Number of Capsicum host RPCs" | awk '{print $NF;}' > tmp
   run_ministat
   extract_avg
@@ -60,7 +60,7 @@ append_curve ()
 {
   y_ref=\$$y_var
   x_ref=\$$x_var
-  echo `eval echo $x_ref` `eval echo $y_ref` >> data-$prefix-$y_var-$impl
+  echo `eval echo $x_ref` `eval echo $y_ref` >> data$CASE-$prefix-$y_var-$impl
 }
 
 process_file ()
@@ -77,27 +77,26 @@ process_file ()
 
 generate_graph ()
 {
-  cat <<EOF >plot-$prefix-$y_var.plot
+  cat <<EOF >plot$CASE-$prefix-$y_var.plot
 set terminal png size 1024,800
-set output 'output-$prefix-$y_var.png'
+set output 'output$CASE-$prefix-$y_var.png'
 set title "$title (averaged over $nruns runs)"
 set xlabel "$xlabel"
 set ylabel "$ylabel"
 plot \\
 EOF
-  for file in data-$prefix-$y_var-*
+  for file in data$CASE-$prefix-$y_var-*
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
-    #echo "'$file' with linespoints title '$file',\\" >> graph.plot
-    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot-$prefix-$y_var.plot
+    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var.plot
   done
-  gnuplot plot-$prefix-$y_var.plot
+  gnuplot plot$CASE-$prefix-$y_var.plot
 }
 
 display_graph ()
 {
-  sxiv output-$prefix-$y_var.png &
+  sxiv output$CASE-$prefix-$y_var.png &
 }
 
 process_files ()
@@ -113,7 +112,7 @@ process_files ()
 
 clean ()
 {
-  rm -f results*-* data-* stat-* *.plot *.png
+  rm -f results*-* data*-* stat*-* *.plot *.png
 }
 
 # Call this with the following variables set appropriately:
@@ -135,6 +134,55 @@ fi
 }
 
 process_tests ()
+{
+  CASE=1
+  filter_inner=
+  sz=500000
+  filter_outer=-$sz
+  prefix=buflen_test
+  y_var=avg_time
+  x_var=BUFLEN
+  xlabel="buffer size (bytes)"
+  ylabel="total time (seconds)"
+  title="CASE $CASE: buffer size variation: compression time for one file of size $sz"
+  process_test
+  
+  CASE=2
+  filter_inner=
+  filter_outer=
+  prefix=compress_time_test
+  y_var=avg_time
+  x_var=x_outer
+  xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
+  ylabel="total time (seconds)"
+  title="CASE $CASE: CCall vs RPC: compression time for 3 files (individually)"
+  process_test
+  
+  CASE=3
+  filter_inner=
+  sz=500000
+  filter_outer=-$sz
+  prefix=sb_create_test
+  y_var=avg_time
+  x_var=x_inner
+  xlabel="number of files"
+  ylabel="total time (seconds)"
+  title="CASE $CASE: sandbox creation overhead: compression time for files of size $sz (consecutively)"
+  process_test
+  
+  CASE=4
+  filter_inner=
+  filter_outer=
+  prefix=compress_time_test
+  y_var=avg_time
+  x_var=x_outer
+  xlabel="bytes each of /dev/random, /dev/zero, b64encode /dev/random"
+  ylabel="total time (seconds)"
+  title="CASE $CASE: capability overhead: compression time for 3 files (individually)"
+  process_test
+}
+
+process_tests_example ()
 {
   filter_inner=
   sz=500000
@@ -186,7 +234,6 @@ process_tests ()
 
 all ()
 {
-CASE=1
   clean
   tar xf results.tar
   process_tests

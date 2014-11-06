@@ -233,8 +233,8 @@ runtests ()
   #runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 
   # perfnotes3: case 1
-  BUFLENS="4096 65536 131072"
   SIZES="4096 65536 500000"
+  BUFLENS="4096 65536 131072"
   PROGS="gzip_u gzip_u_libz_h1"
   CASE=1
   runtest buflen_test init_buflen_test gen_buflen_file_list SIZES bytes BUFLENS bytes
@@ -246,8 +246,8 @@ runtests ()
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
   
   # perfnotes3: case 3
-  NFILES="1 5 10"
   SIZES="500000"
+  NFILES="1 5 10"
   PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
   CASE=3
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
