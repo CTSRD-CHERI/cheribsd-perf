@@ -20,6 +20,12 @@
 
 int	lzsandbox(void *);
 
+#ifdef LZ_SINGLE_SANDBOX
+#define local_lcsp lcsp
+#else /* LZ_SINGLE_SANDBOX */
+#define local_lcsp strm->lcsp
+#endif /* LZ_SINGLE_SANDBOX */
+
 #define	PROXIED_LZ_DEFLATEINIT2	1
 #define	PROXIED_LZ_DEFLATE	2
 #define	PROXIED_LZ_DEFLATEEND	3
@@ -29,8 +35,9 @@ static int			 lzsandbox_initialized;
 static int			 lzsandbox_enabled;
 
 static void
-lzsandbox_initialize(void)
+lzsandbox_initialize(z_streamp strm)
 {
+#ifdef LZ_SINGLE_SANDBOX
 	if (lzsandbox_initialized)
 		return;
 	lzsandbox_initialized = 1;
@@ -38,6 +45,14 @@ lzsandbox_initialize(void)
   if (lch_startfn(lzsandbox, NULL,
       LCH_PERMIT_STDERR, &lcsp) < 0)
     err(-1, "lch_startfn");
+#else /* LZ_SINGLE_SANDBOX */
+  if (!strm->lcsp)
+  {
+    if (lch_startfn(lzsandbox, NULL,
+        LCH_PERMIT_STDERR, &strm->lcsp) < 0)
+      err(-1, "lch_startfn");
+  }
+#endif /* LZ_SINGLE_SANDBOX */
 }
 
 struct host_lz_deflate_req {
@@ -70,7 +85,7 @@ lz_deflate_insandbox(z_streamp strm, int flush)
 	iov_rep[1].iov_base = strm->next_out;
 	iov_rep[1].iov_len = strm->avail_out;
   struct host_rpc_params params;
-  params.scb = lcsp;
+  params.scb = local_lcsp;
   params.opno = PROXIED_LZ_DEFLATE;
   params.req = iov_req;
   params.reqcount = 2;
@@ -155,7 +170,7 @@ sandbox_lz_deflate_buffer(struct lc_host *lchp, uint32_t opno,
 int
 deflate_wrapper(z_streamp strm, int flush)
 {
-	lzsandbox_initialize();
+	lzsandbox_initialize(strm);
   return (lz_deflate_insandbox(strm, flush));
 }
 
@@ -199,7 +214,7 @@ lz_deflateInit2_insandbox(z_streamp strm, int level, int method,
 	iov_rep[0].iov_base = &rep;
 	iov_rep[0].iov_len = sizeof(rep);
   struct host_rpc_params params;
-  params.scb = lcsp;
+  params.scb = local_lcsp;
   params.opno = PROXIED_LZ_DEFLATEINIT2;
   params.req = iov_req;
   params.reqcount = 2;
@@ -257,7 +272,7 @@ deflateInit2_wrapper(z_streamp strm, int level, int method,
   int windowBits, int memLevel, int strategy, const char *version,
   int stream_size)
 {
-	lzsandbox_initialize();
+	lzsandbox_initialize(strm);
   return (lz_deflateInit2_insandbox(strm, level, method, windowBits, memLevel, strategy, version, stream_size));
 }
 
@@ -285,7 +300,7 @@ lz_deflateEnd_insandbox(z_streamp strm)
 	iov_rep.iov_base = &rep;
 	iov_rep.iov_len = sizeof(rep);
   struct host_rpc_params params;
-  params.scb = lcsp;
+  params.scb = local_lcsp;
   params.opno = PROXIED_LZ_DEFLATEEND;
   params.req = &iov_req;
   params.reqcount = 1;
@@ -335,7 +350,7 @@ sandbox_lz_deflateEnd_buffer(struct lc_host *lchp, uint32_t opno,
 int
 deflateEnd_wrapper(z_streamp strm)
 {
-	lzsandbox_initialize();
+	lzsandbox_initialize(strm);
   return (lz_deflateEnd_insandbox(strm));
 }
 

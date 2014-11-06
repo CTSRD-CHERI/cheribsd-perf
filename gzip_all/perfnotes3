@@ -19,6 +19,8 @@ Cases:
     Vary: file size
     X-axis: file size
     Y-axis: time
+    Relevance/point in paper: "Capsicum is slow when placed in a
+    library that does lots of IPC"
 
 3. Sandbox creation overhead
     Test cases:
@@ -29,6 +31,7 @@ Cases:
     Vary: num files
     X-axis: num files
     Y-axis: time
+    NOTE: probably need gzip_u_libz_a1/m and gzip_a1/m and gzip_h1/m cases.
 
 4. Capability overhead
     Test cases:

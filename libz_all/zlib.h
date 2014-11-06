@@ -82,6 +82,10 @@ typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 
 struct internal_state;
 
+#if defined(SB_LIBZ_CAPSICUM) && !defined(LZ_SINGLE_SANDBOX)
+#include <sys/capability.h>
+#endif /* SB_LIBZ_CAPSICUM && !LZ_SINGLE_SANDBOX */
+
 typedef struct z_stream_s {
     z_const Bytef *next_in;     /* next input byte */
     uInt     avail_in;  /* number of bytes available at next_in */
@@ -101,6 +105,9 @@ typedef struct z_stream_s {
     int     data_type;  /* best guess about the data type: binary or text */
     uLong   adler;      /* adler32 value of the uncompressed data */
     uLong   reserved;   /* reserved for future use */
+#if defined(SB_LIBZ_CAPSICUM) && !defined(LZ_SINGLE_SANDBOX)
+    struct lc_sandbox * lcsp;
+#endif /* SB_LIBZ_CAPSICUM && !LZ_SINGLE_SANDBOX */
 } z_stream;
 
 typedef z_stream FAR *z_streamp;
