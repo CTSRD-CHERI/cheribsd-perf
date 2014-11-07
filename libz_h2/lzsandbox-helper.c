@@ -106,13 +106,13 @@ invoke(register_t op,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams)
 {
-  __capability struct lzparams * params = vparams;
-  static int initialized = 0;
   __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Winline-asm"
   __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
 #pragma clang diagnostic pop
+  __capability struct lzparams * params = vparams;
+  static int initialized = 0;
 
   if (!initialized)
   {

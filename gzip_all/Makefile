@@ -48,11 +48,19 @@ progs: gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_
 
 everything: clean all push
 
-dep: libsep libz_u libz_a libcheri_u libc_cheri_u libz_h2 libz_c
+dep: libsep csu_u libz_u libz_a libcheri_u libc_cheri_u libz_h2 libz_c
 		echo done
 
-clean-dep: clean-libsep clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c clean-libcheri_u clean-libc_cheri_u
+clean-dep: clean-libsep clean-csu_u clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c clean-libcheri_u clean-libc_cheri_u
 		echo done
+
+csu_u:
+		cd ../csu_u/cheri && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
+
+clean-csu_u:
+		cd ../csu_u/cheri && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 libz_u:
 		cd ../libz_all && \
@@ -100,11 +108,11 @@ clean-libsep:
 
 libcheri_u:
 		cd ../libcheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
 
 clean-libcheri_u:
 		cd ../libcheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 libc_cheri_u:
 		cd ../libc_cheri_u && \
@@ -162,7 +170,7 @@ gzip_a: gzip_a.o gzsandbox_a.o libz_u libsep
 
 gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o libz_u libcheri_u libc_cheri_u
 		$(CC) $(CFLAGS) -o gzip_h gzip_h.o gzsandbox_h.o $(GZIP_H_LDADD)
-		$(CC) $(CFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib -o gzsandbox-helper_h gzsandbox-helper_h.o $(GZIP_H_HELPER_LDADD)
+		$(CC) $(CFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -Wl,-L../csu_u/cheri -nostdlib -o gzsandbox-helper_h gzsandbox-helper_h.o $(GZIP_H_HELPER_LDADD)
 		$(OBJCOPY) -S -O binary gzsandbox-helper_h gzsandbox-helper_h.bin
 
 gzip_u_libz_h1: gzip_u_libz_h1.o libz_h2

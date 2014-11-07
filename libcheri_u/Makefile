@@ -1,6 +1,7 @@
 # $FreeBSD$
 
-LIB=	cheri
+.include "../cheridefs.mk"
+
 SRCS=	cheri_invoke.S			\
 	cheri_enter.c			\
 	cheri_fd.c			\
@@ -23,25 +24,16 @@ INCS=	cheri_class.h			\
 
 CFLAGS+=	-I${.CURDIR}/${MACHINE_ARCH}
 
-INCSDIR=	${INCLUDEDIR}/cheri
-
-CFLAGS+=	-I${.CURDIR}/../libc/include \
-		-I${.CURDIR}/../libc/locale
-
-SHLIB_MAJOR=	1
-
-MAN=	cheri_invoke.3			\
-	libcheri.3
-
-USE_CHERI=	yes
-
-CLEANFILES=	cheri_classes.o cheri_invoke.o
-
-NO_WERROR=
+all: libcheri.a
 
 .PATH: ${.CURDIR}/${MACHINE_ARCH}
-.PATH: ${.CURDIR}/../libc/string
-.PATH: ${.CURDIR}/../libc/${MACHINE}/string
 
-.include <src.opts.mk>
-.include <bsd.lib.mk>
+OBJS:=$(SRCS:S/.c/.o/g)
+OBJS:=$(OBJS:S/.S/.o/g)
+
+libcheri.a: $(OBJS)
+	$(AR) -r libcheri.a $(OBJS)
+
+clean:
+	rm -f *.a *.o *.so *.So *.so.1 *.po
+

@@ -1,3 +1,8 @@
+addf ()
+{
+  eval $1=`awk -v a=$2 -v b=$3 'BEGIN{print a+b;}'`
+}
+
 extract_avg ()
 {
   if [ $nruns -lt 3 ]
@@ -52,7 +57,7 @@ extract_stats ()
   extract_avg
   avg_capsicum_host_rpcs=$avg_value
 
-  avg_ccall_plus_rpc=`expr $avg_ccalls + $avg_capsicum_host_rpcs`
+  addf avg_ccall_plus_rpc $avg_ccalls $avg_capsicum_host_rpcs
 
   # extract the BUFLEN used
   BUFLEN=`cat $file | grep "^\[stat\] BUFLEN" | head -n 1 | awk '{print $NF;}'`

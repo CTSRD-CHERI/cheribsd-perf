@@ -12,12 +12,13 @@ ZERO="0"
 # for buflen_test:
 BUFLENS="4096 65536 131072"
 
-#PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a gzip_u_libz_h1 gzip_u_libz_hm gzip_h gzip_a_libz_c"
+#PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_h1 gzip_u_libz_hm gzip_h gzip_a_libz_c"
 PROGS="gzip_u gzip_h"
 DESC_gzip_u="(unmodified gzip + unmodified zlib)"
 DESC_gzip_u_libz_c="(unmodified gzip + capability-only zlib)"
 DESC_gzip_a="(Capsicum gzip)"
-DESC_gzip_u_libz_a="(unmodified gzip + Capsicum zlib)"
+DESC_gzip_u_libz_a1="(unmodified gzip + Capsicum zlib with single sandbox)"
+DESC_gzip_u_libz_am="(unmodified gzip + Capsicum zlib with multiple sandboxes)"
 DESC_gzip_u_libz_h1="(unmodified gzip + libcheri zlib with single sandbox)"
 DESC_gzip_u_libz_hm="(unmodified gzip + libcheri zlib with multiple sandboxes)"
 DESC_gzip_h="(libcheri gzip)"
@@ -272,7 +273,7 @@ case1 ()
     nrun=3
     SIZES="500000"
     BUFLENS="64 128 256 512 1024 2048 4096 8192 16384 32768 65536 131072 1000000"
-    PROGS="gzip_u gzip_u_libz_h1"
+    PROGS="gzip_u gzip_u_libz_c gzip_u_libz_h1"
   fi
   runtest buflen_test init_buflen_test gen_buflen_file_list SIZES bytes BUFLENS bytes
 }
@@ -285,11 +286,11 @@ case2 ()
   then
     nrun=1
     SIZES="4096 65536 500000"
-    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a1"
   else
     nrun=3
     SIZES="4096 32768 60000 65536 70000 131072 500000 1000000"
-    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_a1"
   fi
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }

@@ -11,6 +11,10 @@ Cases:
     Y-axis: time
     Results: - libcheri sandboxing ~1.3-1.4x slower than nothing
              - spike at 4 kB
+    Want to say "doubling buffer size makes the zlib libcheri sandboxing perform the same as without sandboxing but half the buffer size."    But overhead becomes constant after buffer size of ~512 bytes:
+        to do: - compare with gzip_c case
+               - check objdump for deflate() to see if the code is different
+               - try gzip_u compiled with -O0.
 
 2. Message passing: send bytes over socket/pipe vs send bytes over CCall
     Test cases:
@@ -24,7 +28,11 @@ Cases:
     Y-axis: time
     Relevance/point in paper: "Capsicum is slow when placed in a
     library that makes it do lots of IPC"
-    Results: - 
+    Results: - Capsicum overhead slightly less than libcheri overhead for a single buffer pass (~5 RPCs). 
+             - Capsicum performs much worse than libcheri (1.5x slower) when many RPCs/CCalls are made (~20ish).
+             - Note: this involved domain cross for all method invocations: deflate()-related and crc32().
+    Can say that the overhead of libz_h1 sandboxing is approximately constant for all file sizes...(but at ~1Meg it seems to increase a bit...) and libz_a sandboxing is really bad (scales with file size).
+    To do: Test up to 10 Meg.
 
 3. Sandbox creation overhead
     Test cases:
@@ -39,6 +47,7 @@ Cases:
     Y-axis: time
     NOTE: probably need gzip_u_libz_a1/m and gzip_a1/m and gzip_h1/m cases.
     Relevance in paper: "fork/process control overhead?"
+    Results: - For 10 files: (in zlib:) making a new sandbox for each file is a lot slower than doing the same for Capsicum, but a single sandbox is much faster than Capsicum. We can probably pull down the time for the multiple libcheri sandbox case to that of the single sandbox case by ELF loader + code sharing.
 
 4. Capability overhead
     Test cases:
