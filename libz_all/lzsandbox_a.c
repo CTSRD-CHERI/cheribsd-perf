@@ -29,6 +29,7 @@ int	lzsandbox(void *);
 #define	PROXIED_LZ_DEFLATEINIT2	1
 #define	PROXIED_LZ_DEFLATE	2
 #define	PROXIED_LZ_DEFLATEEND	3
+#define	PROXIED_LZ_CRC32     	4
 
 static struct lc_sandbox	*lcsp;
 static int			 lzsandbox_initialized;
@@ -354,6 +355,95 @@ deflateEnd_wrapper(z_streamp strm)
   return (lz_deflateEnd_insandbox(strm));
 }
 
+#ifdef SB_LIBZ_CRC32
+struct host_lz_crc32_req {
+  uLong hzc_req_crc;
+  uInt hzc_req_len;
+} __packed;
+
+struct host_lz_crc32_rep {
+  uLong hzc_rep_retval;
+} __packed;
+
+/* strm only used if !LZ_SINGLE_SANDBOX */
+static uLong
+lz_crc32_insandbox(z_streamp strm, uLong crc, const Bytef *buf, uInt len)
+{
+	struct host_lz_crc32_req req;
+	struct host_lz_crc32_rep rep;
+	struct iovec iov_req[2], iov_rep;
+	size_t replen;
+
+	bzero(&req, sizeof(req));
+  req.hzc_req_crc = crc;
+  req.hzc_req_len = len;
+	iov_req[0].iov_base = &req;
+	iov_req[0].iov_len = sizeof(req);
+	iov_req[1].iov_base = (void*) buf;
+	iov_req[1].iov_len = len;
+	iov_rep.iov_base = &rep;
+	iov_rep.iov_len = sizeof(rep);
+  struct host_rpc_params params;
+  params.scb = local_lcsp;
+  params.opno = PROXIED_LZ_CRC32;
+  params.req = iov_req;
+  params.reqcount = 2;
+  params.req_fdp = NULL;
+  params.req_fdcount = 0;
+  params.rep = &iov_rep;
+  params.repcount = 1;
+  params.replenp = &replen;
+  params.rep_fdp = NULL;
+  params.rep_fdcountp = NULL;
+	if (lch_rpc_fix(&params) < 0)
+		err(-1, "lch_rpc");
+	if (replen != sizeof(rep))
+		errx(-1, "lch_rpc len %zu", replen);
+	return (rep.hzc_rep_retval);
+}
+
+static void
+sandbox_lz_crc32_buffer(struct lc_host *lchp, uint32_t opno,
+    uint32_t seqno, char *buffer, size_t len)
+{
+	struct host_lz_crc32_req req;
+	struct host_lz_crc32_rep rep;
+  Bytef * buf = (Bytef *) buffer + sizeof(req);
+	struct iovec iov;
+
+  if (len < sizeof(req))
+		err(-1, "sandbox_lz_crc32_buffer: len %zu", len);
+
+	bcopy(buffer, &req, sizeof(req));
+	
+  if (len != sizeof(req)+req.hzc_req_len)
+		err(-1, "sandbox_lz_crc32_buffer: len %zu", len);
+
+	bzero(&rep, sizeof(rep));
+	rep.hzc_rep_retval = zlib_crc32(req.hzc_req_crc,
+      buf, req.hzc_req_len);
+	iov.iov_base = &rep;
+	iov.iov_len = sizeof(rep);
+
+	if (lcs_sendrpc(lchp, opno, seqno, &iov, 1) < 0)
+		err(-1, "lcs_sendrpc");
+}
+
+uLong
+crc32_wrapper(uLong crc, const Bytef *buf, uInt len)
+{
+  static int initialized = 0;
+  static z_stream strm;
+  if (!initialized)
+  {
+    memset(&strm, 0, sizeof strm);
+    lzsandbox_initialize(&strm);
+    initialized = 1;
+  }
+  return (lz_crc32_insandbox(&strm, crc, buf, len));
+}
+#endif /* SB_LIBZ_CRC32 */
+
 /*
  * Main entry point for capability-mode 
  */
@@ -389,6 +479,11 @@ int lzsandbox(void * context)
 			sandbox_lz_deflateEnd_buffer(lchp, opno, seqno, (char*)buffer,
 			    len);
 			break;
+#ifdef SB_LIBZ_CRC32
+		case PROXIED_LZ_CRC32:
+			sandbox_lz_crc32_buffer(lchp, opno, seqno, (char*)buffer, len);
+			break;
+#endif /* SB_LIBZ_CRC32 */
 		default:
 			errx(-1, "sandbox_workloop: unknown op %d", opno);
 		}

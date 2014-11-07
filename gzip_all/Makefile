@@ -3,6 +3,7 @@
 CFLAGS+=-DNO_XZ_SUPPORT -DNO_BZIP2_SUPPORT
 
 OPTCFLAGS+=-DSB_COLLECT_STATS
+OPTCFLAGS+=-DSB_LIBZ_CRC32
 
 CFLAGS+=$(OPTCFLAGS)
 
@@ -55,64 +56,64 @@ clean-dep: clean-libsep clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c cle
 
 libz_u:
 		cd ../libz_all && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) libz_u.a
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) libz_u.a
 
 clean-libz_u:
 		cd ../libz_all && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 libz_a:
 		cd ../libz_all && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) libz_a1.a libz_am.a
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) libz_a1.a libz_am.a
 
 clean-libz_a:
 		cd ../libz_all && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 libz_h2:
 		cd ../libz_h2 && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-libz.CHERI libz_h.a && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-wrapper.CHERI all && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-helper.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-libz.CHERI libz_h.a && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-wrapper.CHERI all && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-helper.CHERI all
 
 libz_c:
 		cd ../libz_h2 && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-libz.CHERI libz_c.a
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-libz.CHERI libz_c.a
 
 clean-libz_h2:
 		cd ../libz_h2 && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-libz.CHERI clean && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-wrapper.CHERI clean && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-helper.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-libz.CHERI clean && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-wrapper.CHERI clean && \
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-helper.CHERI clean
 
 clean-libz_c:
 		cd ../libz_h2 && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile-libz.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile-libz.CHERI clean
 
 libsep:
 		cd ../libsep && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
 
 clean-libsep:
 		cd ../libsep && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
 
 libcheri_u:
 		cd ../libcheri_u && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
 
 clean-libcheri_u:
 		cd ../libcheri_u && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
 
 libc_cheri_u:
 		cd ../libc_cheri_u && \
 		touch cheri_invoke.So && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
 
 clean-libc_cheri_u:
 		cd ../libc_cheri_u && \
-		OPTCFLAGS=$(OPTCFLAGS) $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o

@@ -1614,8 +1614,13 @@ ZEXTERN uLong ZEXPORT adler32_combine OF((uLong adler1, uLong adler2,
    that the z_off_t type (like off_t) is a signed integer.  If len2 is
    negative, the result has no meaning or utility.
 */
-
+#if defined(SB_LIBZ_CAPSICUM) && defined(SB_LIBZ_CRC32)
+extern uLong crc32_wrapper (uLong crc, const Bytef *buf, uInt len);
+#define crc32 crc32_wrapper
+ZEXTERN uLong ZEXPORT zlib_crc32   OF((uLong crc, const Bytef *buf, uInt len));
+#else /* SB_LIBZ_CAPSICUM && SB_LIBZ_CRC32 */
 ZEXTERN uLong ZEXPORT crc32   OF((uLong crc, const Bytef *buf, uInt len));
+#endif /* SB_LIBZ_CAPSICUM && SB_LIBZ_CRC32 */
 /*
      Update a running CRC-32 with the bytes buf[0..len-1] and return the
    updated CRC-32.  If buf is Z_NULL, this function returns the required

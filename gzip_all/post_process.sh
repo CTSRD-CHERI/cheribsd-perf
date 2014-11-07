@@ -79,9 +79,9 @@ process_file ()
 
 generate_graph ()
 {
-  cat <<EOF >plot$CASE-$prefix-$y_var.plot
+  cat <<EOF >plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
 set terminal png size 1024,800
-set output 'output$CASE-$prefix-$y_var.png'
+set output 'output$CASE-$prefix-$y_var$filter_outer$filter_inner.png'
 set title "$title (averaged over $nruns runs)"
 set xlabel "$xlabel"
 set ylabel "$ylabel"
@@ -93,14 +93,14 @@ EOF
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
-    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var.plot
+    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
   done
-  gnuplot plot$CASE-$prefix-$y_var.plot
+  gnuplot plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
 }
 
 display_graph ()
 {
-  sxiv output$CASE-$prefix-$y_var.png &
+  sxiv output$CASE-$prefix-$y_var$filter_outer$filter_inner.png &
 }
 
 process_files ()

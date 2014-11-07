@@ -308,7 +308,7 @@ case3 ()
     nrun=3
     SIZES="4096 65536 500000"
     NFILES="1 2 5 10 15"
-    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
+    PROGS="gzip_u_libz_am gzip_u_libz_a1"
   fi
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
 }

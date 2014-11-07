@@ -2,12 +2,15 @@ Cases:
 1. Varying the buffer size going in/out of zlib.
     Test cases:
       gzip_u
+      gzip_c
       gzip_u_libz_h1
     Test name: buflen_test
     Constant: num files, file size
     Vary: buffer size
     X-axis: buffer size
     Y-axis: time
+    Results: - libcheri sandboxing ~1.3-1.4x slower than nothing
+             - spike at 4 kB
 
 2. Message passing: send bytes over socket/pipe vs send bytes over CCall
     Test cases:
@@ -20,18 +23,22 @@ Cases:
     X-axis: file size
     Y-axis: time
     Relevance/point in paper: "Capsicum is slow when placed in a
-    library that does lots of IPC"
+    library that makes it do lots of IPC"
+    Results: - 
 
 3. Sandbox creation overhead
     Test cases:
       gzip_u_libz_h1
       gzip_u_libz_hm
+      gzip_u_libz_a1
+      gzip_u_libz_am
     Test name: sb_create_test
     Constant: buffer size, file size
     Vary: num files
     X-axis: num files
     Y-axis: time
     NOTE: probably need gzip_u_libz_a1/m and gzip_a1/m and gzip_h1/m cases.
+    Relevance in paper: "fork/process control overhead?"
 
 4. Capability overhead
     Test cases:
@@ -45,3 +52,7 @@ Cases:
     X-axis: file size
     Y-axis: time
 
+5. Cost of sandboxing every call to read and write
+    Test cases:
+      gzip_u
+      gzip_h
