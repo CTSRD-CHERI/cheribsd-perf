@@ -23,4 +23,4 @@ crtendC_u.o:
 all: $(FILES)
 	echo built crt*
 clean:
-	rm $(FILES)
+	rm -f $(FILES)

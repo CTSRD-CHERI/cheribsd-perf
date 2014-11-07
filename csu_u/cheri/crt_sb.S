@@ -102,6 +102,10 @@ __ccall_enter:
 	#
 	dli	$t0, (~CHERI_PERM_STORE_LOCAL_CAP)
 	candperm	$c0, $c26, $t0
+  
+  # undo those ephemeral perms for now, otherwise things break
+  cmove $c11, $c26
+  cmove $c0, $c26
 
 	#
 	# XXXRW: Defensively clear all general-purpose and capability
