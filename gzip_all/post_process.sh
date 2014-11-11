@@ -8,10 +8,13 @@ extract_avg ()
   if [ $nruns -lt 3 ]
   then
     avg_value=`cat $stat_file`
+    stdev_value=0
   else
     # ministat-format dependent:
     avg_field=6
     avg_value=`tail -n 1 $stat_file | awk '{print $avg_field;}' avg_field=$avg_field`
+    stdev_field=7
+    stdev_value=`tail -n 1 $stat_file | awk '{print $stdev_field;}' stdev_field=$stdev_field`
   fi
 }
 
@@ -35,6 +38,7 @@ extract_stats ()
   run_ministat
   extract_avg
   avg_time=$avg_value
+  stdev_time=$stdev_value
 
   # find average number of ccalls
   stat_file=stat$CASE-${filep}_ccalls
@@ -42,6 +46,7 @@ extract_stats ()
   run_ministat
   extract_avg
   avg_ccalls=$avg_value
+  stdev_ccalls=$stdev_value
   
   # find average number of CHERI sandbox creations
   stat_file=stat$CASE-${filep}_cheri_sandboxes
@@ -49,6 +54,7 @@ extract_stats ()
   run_ministat
   extract_avg
   avg_cheri_sandboxes=$avg_value
+  stdev_cheri_sandboxes=$stdev_value
   
   # find average number of Capsicum host RPCs
   stat_file=stat$CASE-${filep}_capsicum_host_rpcs
@@ -56,6 +62,7 @@ extract_stats ()
   run_ministat
   extract_avg
   avg_capsicum_host_rpcs=$avg_value
+  stdev_capsicum_host_rpcs=$stdev_value
 
   addf avg_ccall_plus_rpc $avg_ccalls $avg_capsicum_host_rpcs
 
@@ -67,7 +74,8 @@ append_curve ()
 {
   y_ref=\$$y_var
   x_ref=\$$x_var
-  echo `eval echo $x_ref` `eval echo $y_ref` >> data$CASE-$prefix-$y_var-$impl$filter_outer$filter_inner
+  y_stdev_ref=\$`echo $y_var | sed s/^avg_/stdev_/g`
+  echo `eval echo $x_ref` `eval echo $y_ref` `eval echo $y_stdev_ref` >> data$CASE-$prefix-$y_var-$impl$filter_outer$filter_inner
 }
 
 process_file ()
@@ -98,7 +106,8 @@ EOF
   do
     echo Generating graph for $file ...
     sort -n $file -o $file
-    echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+    #echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+    echo "'$file' using 0:2:3:xticlabels(1) with yerrorlines title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
   done
   gnuplot plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
 }
