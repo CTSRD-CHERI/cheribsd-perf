@@ -90,7 +90,46 @@ process_file ()
   append_curve
 }
 
-generate_graph ()
+generate_pgfplots_graph ()
+{
+  cat <<EOF >pgf$CASE-$prefix-$y_var$filter_outer$filter_inner.tex
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.5}
+\begin{document}
+\newcommand{\insertdata}[1]{\addplot+[error bars/.cd, y dir=both, y explicit] table[y error index=2] {#1};}
+\begin{figure}
+\centering
+\caption{Caption here}
+\begin{tikzpicture}
+\begin{axis}[
+  %title=
+  xlabel=XLabel here
+  ylabel=YLabel here
+  xmin=0,
+  xmax=20,
+  scaled ticks=false,
+  axis lines=left,
+  legend entries={A,B,C,D,},
+  legend style={legend pos=outer north east,},
+]
+EOF
+  FILES=`ls -1 | grep "data$CASE-$prefix-$y_var-[^-]*$filter_outer$filter_inner"`
+  for file in $FILES
+
+  do
+    echo Generating LaTeX graph for $file ...
+    sort -n $file -o $file
+    echo "\\insertdata{$file}" >> pgf$CASE-$prefix-$y_var$filter_outer$filter_inner.tex
+  done
+  cat <<EOF >>pgf$CASE-$prefix-$y_var$filter_outer$filter_inner.tex
+\end{axis}
+\end{tikzpicture}
+\end{figure}
+EOF
+}
+
+generate_gnuplot_graph ()
 {
   cat <<EOF >plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
 set terminal png size 1024,800
@@ -130,7 +169,7 @@ process_files ()
 
 clean ()
 {
-  rm -f results*-* data*-* stat*-* *.plot *.png
+  rm -f results*-* data*-* stat*-* *.plot *.png *.tex
 }
 
 # Call this with the following variables set appropriately:
@@ -147,7 +186,8 @@ process_test ()
   process_files
 if [ $NFILES -ne 0 ]
 then
-  generate_graph
+  generate_gnuplot_graph
+  generate_pgfplots_graph
   display_graph
 fi
 }

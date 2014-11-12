@@ -190,7 +190,6 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 {
 	struct sandbox_object *sbop;
 	int error;
-  register_t rc;
 
 	sbop = calloc(1, sizeof(*sbop));
 	if (sbop == NULL)
@@ -211,11 +210,11 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	 *
 	 * NB: Should we be passing in a system-class reference...?
 	 */
-	rc = cheri_invoke(sbop->sbo_cheri_object,
-          SANDBOX_RUNTIME_CONSTRUCTORS, 0, 0, 0, 0, 0, 0, 0,
-          cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
-          cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
-          cheri_zerocap(), cheri_zerocap());
+	(void)cheri_invoke(sbop->sbo_cheri_object,
+	    SANDBOX_RUNTIME_CONSTRUCTORS, 0, 0, 0, 0, 0, 0, 0,
+	    cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+	    cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
+	    cheri_zerocap(), cheri_zerocap());
 
 	/*
 	 * Now that constructors have completed, return object.

@@ -24,8 +24,10 @@ CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 
 #CHERI_PUSH_DIR=/mnt2
 
-CHERI_PUSH=scp -i ~/.ssh/mbv21
-CHERI_PUSH_DIR=mbv21@cherrybox.sec.cl.cam.ac.uk:~/tmp
+#CHERI_PUSH=scp -i ~/.ssh/mbv21
+#CHERI_PUSH_DIR=mbv21@cherrybox.sec.cl.cam.ac.uk:~/tmp
+CHERI_PUSH=scp
+CHERI_PUSH_DIR=pot:~/tmp
 CHERI_PULL=$(CHERI_PUSH) $(CHERI_PUSH_DIR)/results.tar .
 
 MACHINE_ARCH=mips64

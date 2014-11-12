@@ -2,7 +2,7 @@ nrun=1
 #SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
 #SIZES="64 4096 65536 500000 1000000"
 SIZES="4096 65536 500000"
-MAXSIZE=50000000
+MAXSIZE=10000000
 BS=$MAXSIZE
 
 # for sb_create_test:
@@ -270,8 +270,8 @@ case1 ()
     BUFLENS="4096 65536 131072"
     PROGS="gzip_u gzip_u_libz_h1"
   else
-    nrun=3
-    SIZES="500000"
+    nrun=4
+    SIZES="10000000"
     BUFLENS="64 128 256 512 1024 2048 4096 8192 16384 32768 65536 131072 1000000"
     PROGS="gzip_u gzip_u_libz_c gzip_u_libz_h1"
   fi
@@ -301,15 +301,15 @@ case3 ()
   CASE=3
   if [ ! -n "$LONG_RUN" ]
   then
-    nrun=1
-    SIZES="500000"
-    NFILES="1 5 10"
-    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
-  else
     nrun=3
     SIZES="4096 65536 500000"
     NFILES="1 2 5 10 15"
     PROGS="gzip_u_libz_am gzip_u_libz_a1"
+  else
+    nrun=4
+    SIZES="500000 10000000"
+    NFILES="1 2 3 4 5 6 7 8 9 10"
+    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
   fi
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
 }
@@ -340,11 +340,10 @@ runtests ()
   #runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 
   LONG_RUN=1
-
   case1
-  case2
+  #case2
   case3
-  case4
+  #case4
   
   cat failures
 }
