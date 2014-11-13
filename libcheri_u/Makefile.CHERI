@@ -2,7 +2,6 @@
 
 .include "../cheridefs.mk"
 
-LIB=	cheri
 SRCS=	cheri_invoke.S			\
 	cheri_enter.c			\
 	cheri_fd.c			\
@@ -30,11 +29,6 @@ INCSDIR=	${INCLUDEDIR}/cheri
 CFLAGS+=	-I${.CURDIR}/../libc/include \
 		-I${.CURDIR}/../libc/locale
 
-SHLIB_MAJOR=	1
-
-MAN=	cheri_invoke.3			\
-	libcheri.3
-
 USE_CHERI=	yes
 
 CLEANFILES=	cheri_classes.o cheri_invoke.o
@@ -45,5 +39,15 @@ NO_WERROR=
 .PATH: ${.CURDIR}/../libc/string
 .PATH: ${.CURDIR}/../libc/${MACHINE}/string
 
-.include <src.opts.mk>
-.include <bsd.lib.mk>
+OBJS=$(SRCS:S/.c/.o/g)
+OBJS:=$(OBJS:S/.S/.o/g)
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+all: libcheri_u.a
+
+libcheri_u.a: $(OBJS)
+	$(AR) -r libcheri_u.a $(OBJS)
+
+clean:
+	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz

@@ -85,6 +85,9 @@
 #include "inflate.h"
 #include "inffast.h"
 #include <machine/cheric.h>
+#include "lzsandbox-helper.h"
+
+int ZEXPORT inflate_c(z_streamp strm, int flush);
 
 #ifdef MAKEFIXED
 #  ifndef BUILDFIXED
@@ -179,17 +182,21 @@ int windowBits;
     return inflateReset(strm);
 }
 
-int ZEXPORT inflateInit2_(strm, windowBits, version, stream_size)
-z_streamp strm;
-int windowBits;
-const char *version;
-int stream_size;
+ZEXTERN int ZEXPORT inflateInit2_c OF((z_streamp strm, __capability void * vparams));
+int ZEXPORT inflateInit2_c (z_streamp strm, __capability void * vparams)
 {
+  __capability struct lzparams * params = vparams;
+  int  windowBits = params->windowBits;
+  __capability const char *version = params->version;
+  int stream_size = params->stream_size;
+
     int ret;
     struct inflate_state FAR *state;
 
     if (version == Z_NULL || version[0] != ZLIB_VERSION[0] ||
         stream_size != (int)(sizeof(z_stream)))
+        ef("%d %d %d %d %d\n", version==Z_NULL, version[0] != ZLIB_VERSION[0],
+  stream_size != (int)(sizeof(z_stream)), stream_size, (int) sizeof(z_stream));
         return Z_VERSION_ERROR;
     if (strm == Z_NULL) return Z_STREAM_ERROR;
     strm->msg = Z_NULL;                 /* in case we return an error */
@@ -226,7 +233,12 @@ z_streamp strm;
 const char *version;
 int stream_size;
 {
-    return inflateInit2_(strm, DEF_WBITS, version, stream_size);
+    struct lzparams params;
+    params.strm = strm;
+    params.windowBits = DEF_WBITS;
+    params.version = version ? cheri_ptr((void*)version, strlen(version)+1) : version;
+    params.stream_size = stream_size;
+    return inflateInit2_c(strm, cheri_ptr(&params, sizeof params));
 }
 
 int ZEXPORT inflatePrime(strm, bits, value)
@@ -604,9 +616,26 @@ unsigned copy;
    will return Z_BUF_ERROR if it has not reached the end of the stream.
  */
 
-int ZEXPORT inflate(strm, flush)
-z_streamp strm;
-int flush;
+#ifdef ZLIB_CAP_ONLY
+int ZEXPORT inflateInit2_ (z_streamp strm,
+                           int windowBits,
+                           const char *version,
+                           int stream_size)
+{
+  struct lzparams params;
+  params.strm = strm;
+  params.windowBits = windowBits;
+  params.version = (__capability void *)version;
+  params.stream_size = stream_size;
+  return inflateInit2_c(strm, (__capability void *)&params);
+}
+int ZEXPORT inflate (z_streamp strm, int flush)
+{
+  return inflate_c(strm, flush);
+}
+#endif /* ZLIB_CAP_ONLY */
+
+int ZEXPORT inflate_c(z_streamp strm, int flush)
 {
     struct inflate_state FAR *state;
     __capability z_const unsigned char FAR *next;    /* next input */

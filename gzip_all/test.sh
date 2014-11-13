@@ -265,10 +265,10 @@ case1 ()
   CASE=1
   if [ ! -n "$LONG_RUN" ]
   then
-    nrun=1
-    SIZES="4096 65536 500000"
-    BUFLENS="4096 65536 131072"
-    PROGS="gzip_u gzip_u_libz_h1"
+    nrun=4
+    SIZES="500000"
+    BUFLENS="64 4096 65536 131072 1000000"
+    PROGS="gzip_u gzip_u_libz_c gzip_u_libz_h1"
   else
     nrun=4
     SIZES="10000000"

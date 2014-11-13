@@ -130,6 +130,12 @@ invoke(register_t op,
     return deflate_c(params->strm, params->flush);
   else if (op == LZOP_DEFLATEEND)
     return deflateEnd(params->strm);
+  else if (op == LZOP_INFLATEINIT2)
+    return inflateInit2_c(params->strm, params);
+  else if (op == LZOP_INFLATE)
+    return inflate_c(params->strm, params->flush);
+  else if (op == LZOP_INFLATEEND)
+    return inflateEnd(params->strm);
   else if (op == LZOP_CRC32)
     return crc32_c(params->crc, params->buf, params->len);
   else

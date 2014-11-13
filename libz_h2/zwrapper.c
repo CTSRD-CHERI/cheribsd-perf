@@ -195,9 +195,50 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 
 int ZEXPORT inflate (z_streamp strm, int flush)
 {
-  (void)strm;
-  (void)flush;
-  return -1;
+  /* XXX: implemented by copy-pasting deflate implementation; may not be completely correct */
+  int rc;
+  struct lzparams params;
+  void * sbop = strm->sbop;
+
+  __capability void * in = strm->next_in_p ?
+    cheri_ptrperm(strm->next_in_p, strm->avail_in,
+        CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in_p;
+  __capability void * out = strm->next_out_p ?
+     cheri_ptrperm(strm->next_out_p, strm->avail_out,
+        CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out_p;
+
+  memset(&params, 0, sizeof params);
+
+  /* lzsandbox-helper and the user app (e.g. gzip) have a different
+   * view of z_streamp; this syncs them up.
+   */
+  strm->next_in_c = in;
+  strm->next_out_c = out;
+
+  params.strm = cheri_ptrperm(strm, sizeof(z_stream),
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP |
+    CHERI_PERM_STORE | CHERI_PERM_STORE_CAP |
+    CHERI_PERM_STORE_LOCAL_CAP);
+  params.flush = flush;
+
+  rc = lzsandbox_invoke(strm, LZOP_INFLATE, &params);
+
+  /* restore next_in, next_out */
+  strm->next_in_p = (void*)strm->next_in_c;
+  strm->next_out_p = (void*)strm->next_out_c;
+
+  if (!subcap(strm->next_in_p ? cheri_ptr(strm->next_in_p, strm->avail_in) : strm->next_in_p, in) ||
+      !subcap(strm->next_out_p ? cheri_ptr(strm->next_out_p, strm->avail_out) : strm->next_out_p, out))
+  {
+    fprintf(stderr, "invalid pointer or length returned by sandbox");
+    exit(1);
+  }
+
+  strm->msg = NULL;
+
+  strm->sbop = sbop;
+
+  return rc;
 }
 
 int ZEXPORT deflateInit2_ (z_streamp strm, int level, int method,
@@ -242,15 +283,53 @@ int ZEXPORT deflateInit2_ (z_streamp strm, int level, int method,
   return rc;
 }
 
+int ZEXPORT inflateInit_ (z_streamp strm,
+                           const char *version, int stream_size)
+{
+/* XXX: #define to get this to compile */
+#define DEF_WBITS 15
+  return inflateInit2_(strm, DEF_WBITS, version, stream_size);
+}
+
+
 int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
                            const char *version, int stream_size)
 {
+  /* XXX: implemented by copy-pasting deflateInit2_ implementation; may not be completely correct */
+  int rc;
+  struct lzparams params;
+  void * next_in = strm->next_in_p;
+  void * next_out = strm->next_out_p;
+  uInt avail_in = strm->avail_in;
+  uInt avail_out = strm->avail_out;
+  void * sbop;
+  
+  memset(&params, 0, sizeof params);
   lzsandbox_initialize(strm);
-  (void)strm;
-  (void)windowBits;
-  (void)version;
-  (void)stream_size;
-  return -1;
+  sbop = strm->sbop;
+  params.strm = cheri_ptrperm(strm, sizeof(z_stream),
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE);
+  strm->next_in_c = NULL;
+  strm->next_out_c = NULL;
+  params.windowBits = windowBits;
+  params.version = cheri_ptrperm((void*)version, strlen(version)+1,
+    CHERI_PERM_LOAD);
+  params.stream_size = stream_size;
+
+
+  fprintf(stderr, "giving invoke the string %p\n", version);
+
+  rc = lzsandbox_invoke(strm, LZOP_INFLATEINIT2, &params);
+
+  /* XXX: see note in deflate() */
+  strm->next_in_p = next_in;
+  strm->avail_in = avail_in;
+  strm->next_out_p = next_out;
+  strm->avail_out = avail_out;
+  strm->msg = NULL;
+  strm->sbop = sbop;
+
+  return rc;
 }
 
 uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
@@ -282,8 +361,11 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
 
 int ZEXPORT inflateEnd (z_streamp strm)
 {
-  (void)strm;
-  return -1;
+  struct lzparams params;
+  memset(&params, 0, sizeof params);
+  params.strm = cheri_ptrperm(strm,
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE);
+  return lzsandbox_invoke(strm, LZOP_INFLATEEND, &params);
 }
 
 int ZEXPORT deflateEnd (z_streamp strm)

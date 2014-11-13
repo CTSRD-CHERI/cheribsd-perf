@@ -8,6 +8,9 @@
 #define LZOP_DEFLATE      1
 #define LZOP_DEFLATEEND   2
 #define LZOP_CRC32        3
+#define LZOP_INFLATEINIT2 4
+#define LZOP_INFLATE      5
+#define LZOP_INFLATEEND   6
 
 #include <machine/cheri.h>
 #include <machine/cheric.h>
@@ -16,10 +19,10 @@ struct lzparams
 {
   z_streamp_c strm;
 
-  /* deflate_c */
+  /* deflate_c, inflate_c */
   int flush;
 
-  /* deflateInit2_c */
+  /* deflateInit2_c, inflateInit2_c */
   int  level;
   int  method;
   int  windowBits;

@@ -230,13 +230,18 @@ push-gzip_a_libz_c:
 push-test:
 		$(CHERI_PUSH) test.sh $(CHERI_PUSH_DIR)/test.sh
 
+DATE!=date +%s
 pull-results:
 		rm -rf results
 		mkdir results
 		cp post_process.sh results/
 		cd results && \
 		$(CHERI_PULL) && \
-		./post_process.sh all
+		./post_process.sh all ; \
+		cd .. && \
+		mv results results$(DATE) && \
+		tar cf results$(DATE).tar results$(DATE) && \
+		mv results$(DATE) results
 
 tar:
 		cp ../libz_h2/lzsandbox-helper.bin .

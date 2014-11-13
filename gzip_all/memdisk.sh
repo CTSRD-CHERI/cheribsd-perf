@@ -1,7 +1,7 @@
-umount /mnt2
-mdconfig -d -u 2
-mdconfig -a -t swap -s 256m -u 2
-newfs -U md2
-mount /dev/md2 /mnt2
-chmod 777 /mnt2
-chmod 777 /mnt2/*
+umount /home/$USER/tmp
+mdconfig -d -u 10
+mdconfig -a -t swap -s 256m -u 10
+newfs -U md10
+mount /dev/md10 /home/$USER/tmp
+chown $USER /home/$USER/tmp
+chmod 777 /home/$USER/tmp

@@ -131,7 +131,8 @@ EOF
 
 generate_gnuplot_graph ()
 {
-  cat <<EOF >plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+  PLOT_FILE=plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+  cat <<EOF >$PLOT_FILE
 set terminal png size 1024,800
 set output 'output$CASE-$prefix-$y_var$filter_outer$filter_inner.png'
 set title "$title (averaged over $nruns runs)"
@@ -146,9 +147,13 @@ EOF
     echo Generating graph for $file ...
     sort -n $file -o $file
     #echo "'$file' using 2:xticlabels(1) with linespoints title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
-    echo "'$file' using 0:2:3:xticlabels(1) with yerrorlines title '$file',\\" >> plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+    echo "'$file' using 0:2:3:xticlabels(1) with yerrorlines title '$file',\\" >> $PLOT_FILE
   done
-  gnuplot plot$CASE-$prefix-$y_var$filter_outer$filter_inner.plot
+# remove trailing ",\"
+  fsz=`cat $PLOT_FILE | wc -c | tr -d " "`
+  dd if=$PLOT_FILE of=tmp2 bs=`expr $fsz - 3` count=1
+  mv tmp2 $PLOT_FILE
+  gnuplot $PLOT_FILE
 }
 
 display_graph ()
@@ -196,15 +201,17 @@ process_tests ()
 {
   CASE=1
   filter_inner=
-  sz=500000
-  filter_outer=-$sz
   prefix=buflen_test
   y_var=avg_time
   x_var=BUFLEN
   xlabel="buffer size (bytes)"
   ylabel="total time (seconds)"
-  title="CASE $CASE: buffer size variation: compression time for one file of size $sz"
-  process_test
+  for sz in 5000000 10000000
+  do
+    filter_outer=-$sz
+    title="CASE $CASE: buffer size variation: compression time for one file of size $sz"
+    process_test
+  done
   
   CASE=2
   filter_inner=
