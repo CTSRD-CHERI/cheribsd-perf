@@ -24,6 +24,9 @@ run_ministat ()
   then
     cat tmp | head -n 1 | awk '{print $1}' > $stat_file
   else
+    # discard first result
+    cat tmp | awk '{if (x) print $0; else x=1;}' > tmp2
+    mv tmp2 tmp
     cat tmp | ministat -n > $stat_file
   fi
 }

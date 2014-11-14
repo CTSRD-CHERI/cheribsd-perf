@@ -19,16 +19,16 @@ CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 
 # CHERI_PUSH is intended to be used in the form
 # $(CHERI_PUSH) local_file $(CHERI_PUSH_DIR)/remote_file
-#CHERI_PUSH=/home/mbv21/git-tmp/myncp/myncp 192.168.1.100 8888
-#CHERI_PULL=/home/mbv21/git-tmp/myncp/myncp -1 8888
+CHERI_PUSH=/home/mbv21/git-tmp/myncp/myncp localhost 8888
+CHERI_PULL=/home/mbv21/git-tmp/myncp/myncp -1 8888
 
-#CHERI_PUSH_DIR=/mnt2
+CHERI_PUSH_DIR=/home/mbv21/tmp
 
 #CHERI_PUSH=scp -i ~/.ssh/mbv21
 #CHERI_PUSH_DIR=mbv21@cherrybox.sec.cl.cam.ac.uk:~/tmp
-CHERI_PUSH=scp
-CHERI_PUSH_DIR=pot:~/tmp
-CHERI_PULL=$(CHERI_PUSH) $(CHERI_PUSH_DIR)/results.tar .
+#CHERI_PUSH=scp
+#CHERI_PUSH_DIR=pot:~/tmp
+#CHERI_PULL=$(CHERI_PUSH) $(CHERI_PUSH_DIR)/results.tar .
 
 MACHINE_ARCH=mips64
 MACHINE=mips

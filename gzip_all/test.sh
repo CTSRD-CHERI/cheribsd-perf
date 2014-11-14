@@ -306,10 +306,10 @@ case3 ()
     NFILES="1 2 5 10 15"
     PROGS="gzip_u_libz_am gzip_u_libz_a1"
   else
-    nrun=4
-    SIZES="500000 10000000"
+    nrun=11
+    SIZES="500000"
     NFILES="1 2 3 4 5 6 7 8 9 10"
-    PROGS="gzip_u_libz_h1 gzip_u_libz_hm"
+    PROGS="gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1 gzip_u"
   fi
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
 }
@@ -324,9 +324,9 @@ case4 ()
     SIZES="4096 65536 500000"
     PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
   else
-    nrun=3
-    SIZES="4096 32768 60000 65536 70000 131072 500000 1000000"
-    PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
+    nrun=11
+    SIZES="4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_h gzip_a_libz_a1 gzip_a"
   fi
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }

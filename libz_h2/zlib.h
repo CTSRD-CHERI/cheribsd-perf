@@ -136,6 +136,9 @@ typedef struct z_stream_s {
     free_func  zfree;   /* used to free the internal state */
     voidpf     opaque;  /* private data object passed to zalloc and zfree */
 
+#ifdef SB_LIBZ_EXT_ALLOC
+#endif /* SB_LIBZ_EXT_ALLOC */
+
     int     data_type;  /* best guess about the data type: binary or text */
     uLong   adler;      /* adler32 value of the uncompressed data */
     uLong   reserved;   /* reserved for future use */

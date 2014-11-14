@@ -243,6 +243,17 @@ pull-results:
 		tar cf results$(DATE).tar results$(DATE) && \
 		mv results$(DATE) results
 
+RESULTS_DIR!=echo $(RESULTS_FILE) | sed s/\.tar//g
+pull-local-results:
+		echo file=$(RESULTS_FILE) dir=$(RESULTS_DIR)
+		mkdir $(RESULTS_DIR)
+		cp post_process.sh $(RESULTS_DIR)/
+		cd $(RESULTS_DIR) && \
+    cp ../$(RESULTS_FILE) results.tar && \
+		./post_process.sh all ; \
+		cd .. && \
+		tar cf $(RESULTS_DIR).p.tar $(RESULTS_DIR)
+
 tar:
 		cp ../libz_h2/lzsandbox-helper.bin .
 		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin lzsandbox-helper.bin test.sh

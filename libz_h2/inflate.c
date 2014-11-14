@@ -195,8 +195,6 @@ int ZEXPORT inflateInit2_c (z_streamp strm, __capability void * vparams)
 
     if (version == Z_NULL || version[0] != ZLIB_VERSION[0] ||
         stream_size != (int)(sizeof(z_stream)))
-        ef("%d %d %d %d %d\n", version==Z_NULL, version[0] != ZLIB_VERSION[0],
-  stream_size != (int)(sizeof(z_stream)), stream_size, (int) sizeof(z_stream));
         return Z_VERSION_ERROR;
     if (strm == Z_NULL) return Z_STREAM_ERROR;
     strm->msg = Z_NULL;                 /* in case we return an error */

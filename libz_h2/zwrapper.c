@@ -316,9 +316,6 @@ int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
     CHERI_PERM_LOAD);
   params.stream_size = stream_size;
 
-
-  fprintf(stderr, "giving invoke the string %p\n", version);
-
   rc = lzsandbox_invoke(strm, LZOP_INFLATEINIT2, &params);
 
   /* XXX: see note in deflate() */
@@ -375,4 +372,13 @@ int ZEXPORT deflateEnd (z_streamp strm)
   params.strm = cheri_ptrperm(strm,
     sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE);
   return lzsandbox_invoke(strm, LZOP_DEFLATEEND, &params);
+}
+
+int ZEXPORT deflateReset (z_streamp strm)
+{
+  struct lzparams params;
+  memset(&params, 0, sizeof params);
+  params.strm = cheri_ptrperm(strm,
+    sizeof(z_stream), CHERI_PERM_LOAD | CHERI_PERM_STORE);
+  return lzsandbox_invoke(strm, LZOP_DEFLATERESET, &params);
 }
