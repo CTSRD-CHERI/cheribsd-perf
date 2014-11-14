@@ -3,12 +3,17 @@
 .include "../cheridefs.mk"
 LIBC_DIR=$(CHERIBSD)/lib/libc
 
+# for debugging
+CFLAGS+=-DSB_DEBUG
+
 LIBZ_H_CFLAGS=-DZLIB_INCL_SANDBOX -DSB_LIBZ_LIBCHERI
+LIBZ_H_CFLAGS+=-mabi=sandbox
 
 # for SB_LIBZ_EXT_ALLOC:
-LIBZ_H_CFLAGS+=-I../libcheri_u/ -I../libcheri_u/${MACHINE_ARCH}/ -DSB_LIBZ_EXT_ALLOC
+#LIBZ_H_CFLAGS+=-I../libcheri_u/ -I../libcheri_u/${MACHINE_ARCH}/ -DSB_LIBZ_EXT_ALLOC
 
 LIBZ_C_CFLAGS=-DZLIB_CAP_ONLY
+LIBZ_C_CFLAGS+=-mabi=sandbox
 
 CFLAGS+=$(OPTCFLAGS)
 
@@ -47,6 +52,8 @@ memcpy_c_tofrom.o:
 
 .c_h.o:
 	$(CC) $(CFLAGS) $(LIBZ_H_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(LIBZ_H_CFLAGS) -E $< -o $@.E
+	$(CC) $(CFLAGS) $(LIBZ_H_CFLAGS) -S -emit-llvm $< -o $@.S
 
 .c_c.o:
 	$(CC) $(CFLAGS) $(LIBZ_C_CFLAGS) -c $< -o $@
@@ -58,5 +65,6 @@ libz_c.a: $(OBJS_C) $(EXTRA_OBJS)
 	$(AR) -r libz_c.a $(OBJS_C) $(EXTRA_OBJS)
 
 clean:
-	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz
+	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz *.o.S *.o.E
+
 

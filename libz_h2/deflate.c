@@ -244,9 +244,13 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 }
 #endif /* ZLIB_CAP_ONLY */
 
-#if defined(ZLIB_CAP_ONLY) || defined(SB_LIBZ_LIBCHERI)
+#if defined(ZLIB_CAP_ONLY)
 #define bufcpy_c_fromcap memcpy_c_fromcap
 #define bufcpy_c_tocap memcpy_c_tocap
+#define bufcpy_c memcpy_c
+#elif defined(SB_LIBZ_LIBCHERI)
+#define bufcpy_c_fromcap memcpy_c
+#define bufcpy_c_tocap memcpy_c
 #define bufcpy_c memcpy_c
 /*void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len)
 {
@@ -270,10 +274,12 @@ __capability void * bufcpy_c (__capability void * dst, __capability const void *
 #endif /* ZLIB_CAP_ONLY || SB_LIBZ_LIBCHERI */
 
 #ifdef SB_DEBUG
-#if defined(ZLIB_CAP_ONLY)
+#if defined(SB_LIBZ_LIBCHERI)
+/* defined in lzsandbox-helper.h */
+#else /* SB_LIBZ_LIBCHERI */
+#include <stdio.h>
 #define ef(...) fprintf(stderr, __VA_ARGS__)
-#elif defined(SB_LIBZ_LIBCHERI)
-#endif /* ZLIB_CAP_ONLY, SB_LIBZ_LIBCHERI */
+#endif /* SB_LIBZ_LIBCHERI */
 #else /* SB_DEBUG */
 #define ef(...) do {} while (0)
 #endif /* SB_DEBUG */

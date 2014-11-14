@@ -125,6 +125,7 @@ clean-libc_cheri_u:
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o
+		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -E gzip.c -o gzip_u.E
 
 gzip_a.o:
 		$(CC) $(CFLAGS) $(GZIP_A_CFLAGS) -c gzip.c -o gzip_a.o
@@ -134,6 +135,8 @@ gzip_h.o:
 
 gzip_u_libz_h1.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -c gzip.c -o gzip_u_libz_h1.o
+		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -E gzip.c -o gzip_u_libz_h1.E
+		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -S -emit-llvm gzip.c -o gzip_u_libz_h1.S
 
 gzip_u_libz_hm.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_HM_CFLAGS) -c gzip.c -o gzip_u_libz_hm.o

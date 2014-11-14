@@ -11,6 +11,7 @@
 #
 
 .include "../cheridefs.mk"
+CFLAGS+=-mabi=sandbox
 
 # libcheri
 LIB=		c_cheri

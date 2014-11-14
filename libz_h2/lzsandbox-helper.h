@@ -18,7 +18,7 @@
 
 struct lzparams
 {
-  z_streamp_c strm;
+  z_stream_cap_pc strm;
 
   /* deflate_c, inflate_c */
   int flush;
@@ -34,6 +34,7 @@ struct lzparams
 
   /* crc32 */
   uLong crc;
+  __capability uLong * crc_result;
   __capability const Bytef * buf;
   uInt len;
 };

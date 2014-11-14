@@ -4,10 +4,10 @@ CFLAGS+=-DZLIB_INCL_WRAPPER
 
 CFLAGS+=$(OPTCFLAGS)
 
-zwrapper1.o:
+zwrapper1.o: zwrapper.c
 		$(CC) $(CFLAGS) -DLZ_SINGLE_SANDBOX -c zwrapper.c -o zwrapper1.o
 
-zwrapperm.o:
+zwrapperm.o: zwrapper.c
 		$(CC) $(CFLAGS) -c zwrapper.c -o zwrapperm.o
 
 all: zwrapper1.o zwrapperm.o

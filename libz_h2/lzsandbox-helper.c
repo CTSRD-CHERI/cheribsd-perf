@@ -39,7 +39,8 @@ ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
   struct cheri_fd_ret rc;
   rc = cheri_fd_read_c(fd, cheri_ptrperm(buf, nbytes, CHERI_PERM_STORE));
-  errno = rc.cfr_retval1;
+  /* XXX: errno is broken in sandbox ABI */
+  /*errno = rc.cfr_retval1;*/
   return rc.cfr_retval0;
 }
 
@@ -47,7 +48,8 @@ ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes)
 {
   struct cheri_fd_ret rc;
   rc = cheri_fd_write_c(fd, cheri_ptrperm((void*)buf, nbytes, CHERI_PERM_LOAD));
-  errno = rc.cfr_retval1;
+  /* XXX: errno is broken in sandbox ABI */
+  /*errno = rc.cfr_retval1;*/
   return rc.cfr_retval0;
 }
 
@@ -139,7 +141,10 @@ invoke(register_t op,
   else if (op == LZOP_INFLATEEND)
     return inflateEnd(params->strm);
   else if (op == LZOP_CRC32)
-    return crc32_c(params->crc, params->buf, params->len);
+  {
+    *params->crc_result = crc32_c(params->crc, params->buf, params->len);
+    return 0;
+  }
   else
   {
     fprintf_c(stderrfd, "invoke: unrecognized op: %d\n", (int) op);

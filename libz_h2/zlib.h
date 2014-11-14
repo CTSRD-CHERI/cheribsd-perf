@@ -41,6 +41,10 @@
 #include <cheri/sandbox.h>
 #include "zconf.h"
 
+#ifdef SB_LIBZ_EXT_ALLOC
+#include "cheri_fn.h"
+#endif /* SB_LIBZ_EXT_ALLOC */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -96,15 +100,87 @@ __capability void * bufcpy_c (__capability void * dst, __capability const void *
 
 struct internal_state;
 
+/* XXX: slightly confusing: LIBZ_LIBCHERI case and INCL_APP case both need to see the cap, but CAP_ONLY doesn't use it */
+#if defined(ZLIB_CAP_ONLY)
+#define MAYBE_DECL_LIBZ_CAP(ptr) \
+  ptr
+#else /* ZLIB_CAP_ONLY*/
+#define MAYBE_DECL_LIBZ_CAP(ptr) \
+  __capability ptr
+#endif /* ZLIB_CAP_ONLY*/
+
+typedef struct z_stream_s_nocap {
+    z_const Bytef * next_in;     /* next input byte */
+    uInt     avail_in;  /* number of bytes available at next_in */
+    uLong    total_in;  /* total number of input bytes read so far */
+
+    Bytef * next_out; /* next output byte should be put there */
+    uInt     avail_out; /* remaining free space at next_out */
+    uLong    total_out; /* total number of bytes output so far */
+
+    /* XXX: disabled by zwrapper */
+    z_const char * msg;  /* last error message, NULL if no error */
+
+    MAYBE_DECL_LIBZ_CAP(struct internal_state FAR * state); /* not visible by applications */
+
+    alloc_func zalloc;  /* used to allocate the internal state */
+    free_func  zfree;   /* used to free the internal state */
+    //voidpf     opaque;  /* private data object passed to zalloc and zfree */
+    MAYBE_DECL_LIBZ_CAP(void*     opaque);  /* private data object passed to zalloc and zfree */
+
+    int     data_type;  /* best guess about the data type: binary or text */
+    uLong   adler;      /* adler32 value of the uncompressed data */
+    uLong   reserved;   /* reserved for future use */
+    struct sandbox_object * sbop;
+} z_stream_nocap;
+
+typedef struct z_stream_s_cap {
+    __capability z_const Bytef *next_in;
+    uInt     avail_in;  /* number of bytes available at next_in */
+    uLong    total_in;  /* total number of input bytes read so far */
+
+    __capability Bytef *next_out;
+    uInt     avail_out; /* remaining free space at next_out */
+    uLong    total_out; /* total number of bytes output so far */
+
+    /* XXX: disabled by zwrapper */
+    MAYBE_DECL_LIBZ_CAP(z_const char * msg);  /* last error message, NULL if no error */
+
+    MAYBE_DECL_LIBZ_CAP(struct internal_state FAR * state); /* not visible by applications */
+
+    alloc_func zalloc;  /* used to allocate the internal state */
+    free_func  zfree;   /* used to free the internal state */
+    //MAYBE_DECL_LIBZ_CAP(voidpf     opaque);  /* private data object passed to zalloc and zfree */
+    MAYBE_DECL_LIBZ_CAP(void*     opaque);  /* private data object passed to zalloc and zfree */
+
+#ifdef SB_LIBZ_EXT_ALLOC
+    struct cheri_object zalloc_object;
+    struct cheri_object zfree_object;
+#endif /* SB_LIBZ_EXT_ALLOC */
+
+    int     data_type;  /* best guess about the data type: binary or text */
+    uLong   adler;      /* adler32 value of the uncompressed data */
+    uLong   reserved;   /* reserved for future use */
+} z_stream_cap;
+
+#if defined(ZLIB_INCL_APP) || defined(ZLIB_INCL_WRAPPER)
+#define z_stream_s z_stream_s_nocap
+#define z_stream z_stream_nocap
+#elif defined(ZLIB_INCL_SANDBOX) || defined(ZLIB_CAP_ONLY)
+#define z_stream_s z_stream_s_cap
+#define z_stream z_stream_cap
+#endif
+
+#if 0
 typedef struct z_stream_s {
 #if defined(ZLIB_INCL_APP)
-    z_const Bytef *next_in;     /* next input byte */
+    MAYBE_ABI_PAD(z_const Bytef *, next_in);     /* next input byte */
     __capability z_const Bytef *padding1;
 #elif defined(ZLIB_INCL_SANDBOX)
     z_const Bytef *padding1;
     __capability z_const Bytef *next_in;
 #elif defined(ZLIB_INCL_WRAPPER)
-    z_const Bytef *next_in_p;
+    MAYBE_ABI_PAD(z_const Bytef *, next_in_p);
     __capability z_const Bytef *next_in_c;
 #elif defined(ZLIB_CAP_ONLY)
     __capability z_const Bytef *next_in;
@@ -113,13 +189,13 @@ typedef struct z_stream_s {
     uLong    total_in;  /* total number of input bytes read so far */
 
 #if defined(ZLIB_INCL_APP)
-    Bytef    *next_out; /* next output byte should be put there */
+    MAYBE_ABI_PAD(Bytef *, next_out); /* next output byte should be put there */
     __capability Bytef *padding2;
 #elif defined(ZLIB_INCL_SANDBOX)
     Bytef *padding2;
     __capability Bytef *next_out;
 #elif defined(ZLIB_INCL_WRAPPER)
-    Bytef *next_out_p;
+    MAYBE_ABI_PAD(Bytef *, next_out_p);
     __capability Bytef *next_out_c;
 #elif defined(ZLIB_CAP_ONLY)
     __capability Bytef *next_out;
@@ -128,22 +204,25 @@ typedef struct z_stream_s {
     uLong    total_out; /* total number of bytes output so far */
 
     /* XXX: disabled by zwrapper */
-    z_const char *msg;  /* last error message, NULL if no error */
+    MAYBE_ABI_PAD(z_const char *, msg);  /* last error message, NULL if no error */
 
-    struct internal_state FAR *state; /* not visible by applications */
+    MAYBE_ABI_PAD(struct internal_state FAR *, state); /* not visible by applications */
 
     alloc_func zalloc;  /* used to allocate the internal state */
     free_func  zfree;   /* used to free the internal state */
-    voidpf     opaque;  /* private data object passed to zalloc and zfree */
+    MAYBE_ABI_PAD(voidpf,     opaque);  /* private data object passed to zalloc and zfree */
 
 #ifdef SB_LIBZ_EXT_ALLOC
+    struct cheri_object zalloc_c;
+    struct cheri_object zfree_c;
 #endif /* SB_LIBZ_EXT_ALLOC */
 
     int     data_type;  /* best guess about the data type: binary or text */
     uLong   adler;      /* adler32 value of the uncompressed data */
     uLong   reserved;   /* reserved for future use */
-    struct sandbox_object * sbop;
+    MAYBE_ABI_PAD(struct sandbox_object *, sbop);
 } z_stream;
+#endif /* 0 */
 
 /* XXX: it's not nice, but it makes things work */
 #if defined(ZLIB_INCL_APP) || defined(ZLIB_INCL_WRAPPER)
@@ -151,7 +230,7 @@ typedef z_stream FAR *z_streamp;
 #elif defined(ZLIB_INCL_SANDBOX) || defined(ZLIB_CAP_ONLY)
 typedef __capability z_stream FAR *z_streamp;
 #endif
-typedef __capability z_stream FAR *z_streamp_c;
+typedef __capability z_stream_cap FAR *z_stream_cap_pc;
 
 /*
      gzip header information passed to and from zlib routines.  See RFC 1952
