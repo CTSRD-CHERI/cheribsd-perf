@@ -70,7 +70,7 @@ uLong ZEXPORT adler32(adler, buf, len)
     uInt len;
 {
 	return (adler32_c(adler,
-	    buf ? cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD) : buf,
+	    buf/* ? cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD) : buf*/,
 	    len));
 }
 
@@ -81,7 +81,6 @@ uLong ZEXPORT adler32_c(adler, buf, len)
 {
     unsigned long sum2;
     unsigned n;
-
     /* split Adler-32 into component sums */
     sum2 = (adler >> 16) & 0xffff;
     adler &= 0xffff;

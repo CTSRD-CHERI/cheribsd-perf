@@ -747,7 +747,6 @@ struct timeval before, after, diff, total;
 				break;
 
 			crc = crc32(crc, (const Bytef *)inbufp, (unsigned)in_size);
-      fprintf(stderr, "crc: 0x%x\n", crc);
 			in_tot += in_size;
 			z.next_in = MAYBE_MAKE_CAP((unsigned char *)inbufp);
 			z.avail_in = in_size;

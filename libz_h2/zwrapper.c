@@ -209,7 +209,68 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 
 int ZEXPORT inflate (z_streamp strm, int flush)
 {
-  return -1;
+  int rc;
+  struct lzparams params;
+  z_stream_cap strm_cap;
+  void * sbop = strm->sbop;
+
+  __capability void * in = strm->next_in ?
+    cheri_ptrperm(strm->next_in, strm->avail_in,
+        CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in;
+  __capability void * out = strm->next_out ?
+     cheri_ptrperm(strm->next_out, strm->avail_out,
+        CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out;
+
+  memset(&params, 0, sizeof params);
+  memset(&strm_cap, 0, sizeof strm_cap);
+
+  strm_cap.next_in = in;
+  strm_cap.next_out = out;
+  strm_cap.avail_in = strm->avail_in;
+  strm_cap.avail_out = strm->avail_out;
+  strm_cap.total_in = strm->total_in;
+  strm_cap.total_out = strm->total_out;
+  strm_cap.state = strm->state;
+  strm_cap.data_type = strm->data_type;
+  strm_cap.adler = strm->adler;
+  strm_cap.reserved = strm->reserved;
+  /* XXX: TODO: zalloc,zfree,opaque */
+  strm_cap.zalloc = strm->zalloc;
+  strm_cap.zfree = strm->zfree;
+  strm_cap.opaque = strm->opaque;
+
+  params.strm = cheri_ptrperm(&strm_cap, sizeof strm_cap,
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP |
+    CHERI_PERM_STORE | CHERI_PERM_STORE_CAP |
+    CHERI_PERM_STORE_LOCAL_CAP);
+  params.flush = flush;
+
+  rc = lzsandbox_invoke(strm, LZOP_INFLATE, &params);
+
+  /* restore next_in, next_out */
+  strm->next_in = (void*)strm_cap.next_in;
+  strm->next_out = (void*)strm_cap.next_out;
+  strm->avail_in = strm_cap.avail_in;
+  strm->avail_out = strm_cap.avail_out;
+  strm->total_in = strm_cap.total_in;
+  strm->total_out = strm_cap.total_out;
+  strm->state = strm_cap.state;
+  strm->data_type = strm_cap.data_type;
+  strm->adler = strm_cap.adler;
+  strm->reserved = strm_cap.reserved;
+  /* XXX: TODO: zalloc,zfree,opaque */
+  strm->zalloc = strm_cap.zalloc;
+  strm->zfree = strm_cap.zfree;
+  strm->opaque = strm_cap.opaque;
+
+  if (!subcap(strm->next_in ? cheri_ptr(strm->next_in, strm->avail_in) : strm->next_in, in) ||
+      !subcap(strm->next_out ? cheri_ptr(strm->next_out, strm->avail_out) : strm->next_out, out))
+  {
+    fprintf(stderr, "invalid pointer or length returned by sandbox");
+    exit(1);
+  }
+
+  return rc;
 }
 
 int ZEXPORT deflateInit2_ (z_streamp strm, int level, int method,
@@ -277,7 +338,48 @@ int ZEXPORT inflateInit_ (z_streamp strm,
 int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
                            const char *version, int stream_size)
 {
-  return -1;
+  int rc;
+  struct lzparams params;
+  z_stream_cap strm_cap;
+  void * next_in = strm->next_in;
+  void * next_out = strm->next_out;
+  uInt avail_in = strm->avail_in;
+  uInt avail_out = strm->avail_out;
+  void * sbop;
+
+  stream_size = sizeof(z_stream_cap);
+
+#ifdef SB_LIBZ_EXT_ALLOC
+  wrap_alloc_fn(strm);
+#endif /* SB_LIBZ_EXT_ALLOC */
+  
+  memset(&params, 0, sizeof params);
+  memset(&strm_cap, 0, sizeof strm_cap);
+  lzsandbox_initialize(strm);
+  sbop = strm->sbop;
+  params.strm = cheri_ptrperm(&strm_cap, sizeof strm_cap,
+    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE | CHERI_PERM_STORE_CAP);
+  
+  params.windowBits = windowBits;
+  params.version = cheri_ptrperm((void*)version, strlen(version)+1,
+    CHERI_PERM_LOAD);
+  params.stream_size = stream_size;
+
+  rc = lzsandbox_invoke(strm, LZOP_INFLATEINIT2, &params);
+
+  strm->state = strm_cap.state;
+  strm->data_type = strm_cap.data_type;
+  strm->adler = strm_cap.adler;
+  strm->reserved = strm_cap.reserved;
+  strm->zalloc = strm_cap.zalloc;
+  strm->zfree = strm_cap.zfree;
+  strm->opaque = strm_cap.opaque;
+
+#ifdef SB_LIBZ_EXT_ALLOC
+  restore_alloc_fn(strm);
+#endif /* SB_LIBZ_EXT_ALLOC */
+
+  return rc;
 }
 
 uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
@@ -310,7 +412,28 @@ uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
 
 int ZEXPORT inflateEnd (z_streamp strm)
 {
-  return -1;
+  struct lzparams params;
+  z_stream_cap strm_cap;
+  memset(&params, 0, sizeof params);
+  memset(&strm_cap, 0, sizeof strm_cap);
+  /* XXX: check that these are the only things that inflateEnd might need... */
+  strm_cap.next_in = NULL;
+  strm_cap.next_out = NULL;
+  strm_cap.avail_in = strm->avail_in;
+  strm_cap.avail_out = strm->avail_out;
+  strm_cap.total_in = strm->total_in;
+  strm_cap.total_out = strm->total_out;
+  strm_cap.state = strm->state;
+  /* XXX: zalloc, zfree, opaque */
+  strm_cap.zalloc = strm->zalloc;
+  strm_cap.zfree = strm->zfree;
+  strm_cap.opaque = strm->opaque;
+  strm_cap.data_type = strm->data_type;
+  strm_cap.adler = strm->adler;
+  strm_cap.reserved = strm->reserved;
+  params.strm = cheri_ptrperm(&strm_cap,
+    sizeof(z_stream_cap), CHERI_PERM_LOAD | CHERI_PERM_STORE | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE_CAP);
+  return lzsandbox_invoke(strm, LZOP_INFLATEEND, &params);
 }
 
 int ZEXPORT deflateEnd (z_streamp strm)
@@ -341,5 +464,26 @@ int ZEXPORT deflateEnd (z_streamp strm)
 
 int ZEXPORT deflateReset (z_streamp strm)
 {
-  return -1;
+  struct lzparams params;
+  z_stream_cap strm_cap;
+  memset(&params, 0, sizeof params);
+  memset(&strm_cap, 0, sizeof strm_cap);
+  /* XXX: check that these are the only things that deflateEnd might need... */
+  strm_cap.next_in = NULL;
+  strm_cap.next_out = NULL;
+  strm_cap.avail_in = strm->avail_in;
+  strm_cap.avail_out = strm->avail_out;
+  strm_cap.total_in = strm->total_in;
+  strm_cap.total_out = strm->total_out;
+  strm_cap.state = strm->state;
+  /* XXX: zalloc, zfree, opaque */
+  strm_cap.zalloc = strm->zalloc;
+  strm_cap.zfree = strm->zfree;
+  strm_cap.opaque = strm->opaque;
+  strm_cap.data_type = strm->data_type;
+  strm_cap.adler = strm->adler;
+  strm_cap.reserved = strm->reserved;
+  params.strm = cheri_ptrperm(&strm_cap,
+    sizeof(z_stream_cap), CHERI_PERM_LOAD | CHERI_PERM_STORE | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE_CAP);
+  return lzsandbox_invoke(strm, LZOP_DEFLATERESET, &params);
 }
