@@ -104,6 +104,12 @@ __invoke_vector:
 	dli	$t0, (~CHERI_PERM_STORE_LOCAL_CAP)
 	candperm	$c0, $c26, $t0
 
+	# undo those ephemeral perms for now, otherwise things break inside libz
+	# (libz likes to store things from the passed parameters in the stack to
+	# its internal structures in heap-allocated memory)
+	cmove $c11, $c26
+	cmove $c0, $c26
+
 	#
 	# The compiler is responsible for scrubbing unused argument registers
 	# (since only it has the information required to do so).  CCall is
