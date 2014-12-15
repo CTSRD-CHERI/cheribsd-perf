@@ -53,6 +53,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "cheri_class.h"
 #include "cheri_enter.h"
 #include "cheri_invoke.h"
 #include "libcheri_stat.h"
@@ -185,8 +186,15 @@ sandbox_class_destroy(struct sandbox_class *sbcp)
 	free(sbcp);
 }
 
+/*
+ * XXXRW: I'm not really happy with this approach of limiting access to system
+ * resources via flags passed here.  We should use a more general security
+ * model based on capability permissions.  However, this does allow us to more
+ * generally get up and running.
+ */
 int
-sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
+sandbox_object_new_flags(struct sandbox_class *sbcp, uint flags,
+    struct sandbox_object **sbopp)
 {
 	struct sandbox_object *sbop;
 	int error;
@@ -194,7 +202,9 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	sbop = calloc(1, sizeof(*sbop));
 	if (sbop == NULL)
 		return (-1);
+	CHERI_SYSTEM_OBJECT_INIT(sbop);
 	sbop->sbo_sandbox_classp = sbcp;
+	sbop->sbo_flags = flags;
 
 	error = sandbox_object_load(sbcp, sbop);
 	if (error) {
@@ -210,7 +220,7 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	 *
 	 * NB: Should we be passing in a system-class reference...?
 	 */
-	(void)cheri_invoke(sbop->sbo_cheri_object,
+	(void)cheri_invoke(sbop->sbo_cheri_object_rtld,
 	    SANDBOX_RUNTIME_CONSTRUCTORS, 0, 0, 0, 0, 0, 0, 0,
 	    cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
 	    cheri_zerocap(), cheri_zerocap(), cheri_zerocap(),
@@ -221,6 +231,16 @@ sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
 	 */
 	*sbopp = sbop;
 	return (0);
+}
+
+#define	SANDBOX_OBJECT_FLAG_DEFAULT	(SANDBOX_OBJECT_FLAG_CONSOLE |	\
+	    SANDBOX_OBJECT_FLAG_ALLOCFREE | SANDBOX_OBJECT_FLAG_USERFN)
+int
+sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
+{
+
+	return (sandbox_object_new_flags(sbcp, SANDBOX_OBJECT_FLAG_DEFAULT,
+	    sbopp));
 }
 
 register_t
@@ -248,8 +268,8 @@ sandbox_object_cinvoke(struct sandbox_object *sbop, u_int methodnum,
 		SANDBOX_METHOD_INVOKE(sbcp->sbc_sandbox_method_nonamep);
 	SANDBOX_OBJECT_INVOKE(sbop->sbo_sandbox_object_statp);
 	start = cheri_get_cyclecount();
-	v0 = cheri_invoke(sbop->sbo_cheri_object, methodnum, a1, a2, a3, a4,
-	    a5, a6, a7, c3, c4, c5, c6, c7, c8, c9, c10);
+	v0 = cheri_invoke(sbop->sbo_cheri_object_invoke, methodnum, a1, a2,
+	    a3, a4, a5, a6, a7, c3, c4, c5, c6, c7, c8, c9, c10);
 	sample = cheri_get_cyclecount() - start;
 	SANDBOX_METHOD_TIME_SAMPLE(sbcp->sbc_sandbox_methods[methodnum],
 	    sample);
@@ -336,14 +356,14 @@ struct cheri_object
 sandbox_object_getobject(struct sandbox_object *sbop)
 {
 
-	return (sbop->sbo_cheri_object);
+	return (sbop->sbo_cheri_object_invoke);
 }
 
 struct cheri_object
 sandbox_object_getsystemobject(struct sandbox_object *sbop)
 {
 
-	return (sbop->sbo_cheri_system_object);
+	return (sbop->sbo_cheri_object_system);
 }
 
 int

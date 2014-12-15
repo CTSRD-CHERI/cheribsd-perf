@@ -46,7 +46,7 @@
 #    $idc contains the unsealed invoked data capability
 #
 # Expectations on the caller
-#    $a0-$17 will contain non-capability arguments
+#    $a0-$a7 will contain non-capability arguments
 #    $c3-$c10 will contain capability arguments
 #
 # Expectations on the class code and instance setup:
@@ -54,10 +54,10 @@
 #
 # Things that will be set up for the callee C code
 #    $c0, $c11 will be set up to match the class
-#    $c11 will have have the non-ephemeral bit cleared
+#    $c11 will have have the global bit cleared
 #    $sp, $fp will point into an in-sandbox stack, relative to $c11
 #
-# __ccall_enter will jump to the 'invoke' symbol and arrange a CReturn when
+# __invoke_vector will jump to the 'invoke' symbol and arrange a CReturn when
 # that function returns.  This code also implements 'abort' and '_exit'
 # symbols that can be used to fall back out quickly and efficiently.
 #
@@ -77,9 +77,9 @@
 #     must change before we can run Clang-compiled CHERI code.
 #
 	.text
-	.global __ccall_enter
-	.ent __ccall_enter
-__ccall_enter:
+	.global __invoke_vector
+	.ent __invoke_vector
+__invoke_vector:
 
 	#
 	# Set up in-sandbox stack; assume that suitable space for a stack has
@@ -98,18 +98,16 @@ __ccall_enter:
 	#
 	# Install $idc as $c0.  From here on out, we can do MIPS fetches and
 	# stores to memory inside the sandbox, and $c0-relative capability
-	# fetches and stores.
+	# fetches and stores.  We are not allowed to store non-global
+	# capabilities to the sandbox-local heap (currently).
 	#
 	dli	$t0, (~CHERI_PERM_STORE_LOCAL_CAP)
 	candperm	$c0, $c26, $t0
-  
-  # undo those ephemeral perms for now, otherwise things break
-  cmove $c11, $c26
-  cmove $c0, $c26
 
 	#
-	# XXXRW: Defensively clear all general-purpose and capability
-	# registers that aren't explicit or ABI-implied arguments.
+	# The compiler is responsible for scrubbing unused argument registers
+	# (since only it has the information required to do so).  CCall is
+	# responsible for scrubbing all other registers.
 	#
 
 	#
@@ -118,83 +116,47 @@ __ccall_enter:
 	dla	$gp, _gp
 
 	#
-	# Extract heap base and length from sandbox metadata.  These must
-	# match sandboxasm.h.
-	#
-	# XXXRW: I'm having trouble using the C preprocessor to provide these
-	# values in assembly, so hard-coded for now.  We could also just defer
-	# these calculations to C.
-	#
-	dli	$t0, 0x1000
-	ld	$t1, 0($t0)
-	dla	$t2, _sb_heapbase;
-	sd	$t1, 0($t2)
-
-	ld	$t1, 8($t0)
-	dla	$t2, _sb_heaplen;
-	sd	$t1, 0($t2)
-
-	#-
-	# The sandbox runtime intercepts specific reserved methods; this comes
-	# at a cost on every method invocation, so we might wish to introduce
-	# a separate entry point for this.  Another advantage to a separate
-	# entry point is that we could choose not to delegate the ability to
-	# invoke that entry point outside of the sandbox library.
-	#
-	# -1 Constructors
-	# -2 Destructors (unimplemented)
-	#
-	dli	$at, -1
-	beq	$a0, $at, constructors
-
-	#
 	# Call the MIPS/CHERI-ABI C "invoke" function.
 	#
 	dla	$t9, invoke
 	jalr	$t9
 	nop			# Branch-delay slot
 
-abort_target:
+creturn_target:
 	#
-	# Clear our $c0 so that it is not leaked back to caller.
+	# The compiler is responsible for scrubbing unused return-value
+	# registers # (since only it has the information required to do so).
+	# CReturn is responsible for scrubbing all other registers.
 	#
-	# XXXRW: Arguably we should do this for many other registers too,
-	# especially as the compiler starts using them.
-	#
-	ccleartag	$c0, $c0
-	ccleartag	$c11, $c11
 
 	#
 	# Return to caller.
 	#
 	creturn
-	.end __ccall_enter
+	.end __invoke_vector
 
 	.global abort
 	.ent abort
 abort:
+	#
+	# In general, the compiler should be scrubbing unused return values,
+	# as  only it has the information to do so.  However, in the case of
+	# abort(), that responsibility lies with the runtime: we explicitly
+	# set $v0, and clear $v1/$c3.
+	#
+	cfromptr	$c3, $c3, $zero
 	dli	$v0, -2
-	b	abort_target
-	nop
+	b	creturn_target
+	dli	$v1, 0		# Branch-delay slot
 	.end abort
 
 	.global _exit
 	.ent _exit
 _exit:
+	cfromptr	$c3, $c3, $zero
 	move	$v0, $a0
-	b	abort_target
-	nop
+	b	creturn_target
+	dli	$v1, 0		# Branch-delay slot
 	.end _exit
-
-constructors:
-	#
-	# Perform constructor intialisation from C; the C code must be very
-	# careful not to depend on the outcome of any constructors!
-	#
-	dla	$t9, crt_sb_constructors
-	jalr	$t9
-	nop
-	b	abort_target
-	dli	$v0, 0		# Branch-delay slot
 
 	.data

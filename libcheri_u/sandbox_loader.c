@@ -74,7 +74,7 @@ int
 sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 {
 	__capability void *codecap, *datacap, *typecap;
-	struct sandbox_metadata *sbm;
+	struct sandbox_metadata *sbmp;
 	size_t length;
 	int saved_errno;
 	uint8_t *base;
@@ -91,7 +91,11 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	 * K          [guard page]
 	 * J + 0x1000 [heap]
 	 * J          [guard page]
-	 * 0x8000     [memory mapped binary] (SANDBOX_ENTRY)
+	 *  +0x600      Reserved vector
+	 *  +0x400      Reserved vector
+	 *  +0x200      Object-capability invocation vector
+	 *  +0x0        Run-time linker vector
+	 * 0x8000     [memory mapped binary]
 	 * 0x2000     [guard page]
 	 * 0x1000     [read-only sandbox metadata page]
 	 * 0x0000     [guard page]
@@ -118,7 +122,7 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	 * Map metadata structure -- but can't fill it out until we have
 	 * calculated all the other addresses involved.
 	 */
-	if ((sbm = mmap(base, METADATA_SIZE, PROT_READ | PROT_WRITE,
+	if ((sbmp = mmap(base, METADATA_SIZE, PROT_READ | PROT_WRITE,
 	    MAP_ANON | MAP_FIXED, -1, 0)) == MAP_FAILED) {
 		saved_errno = errno;
 		warn("%s: mmap metadata", __func__);
@@ -131,9 +135,10 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	 * the sandbox entry address.  This address is hard to change as it is
 	 * the address used in static linking for sandboxed code.
 	 */
-	assert((register_t)base - (register_t)sbop->sbo_mem < SANDBOX_ENTRY);
-	base = (void *)((register_t)sbop->sbo_mem + SANDBOX_ENTRY);
-	length = sbcp->sbc_sandboxlen - SANDBOX_ENTRY;
+	assert((register_t)base - (register_t)sbop->sbo_mem <
+	    SANDBOX_BINARY_BASE);
+	base = (void *)((register_t)sbop->sbo_mem + SANDBOX_BINARY_BASE);
+	length = sbcp->sbc_sandboxlen - SANDBOX_BINARY_BASE;
 
 	/*
 	 * Map program binary.
@@ -198,8 +203,8 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	 * Now that addresses are known, write out metadata for in-sandbox
 	 * use; then mprotect() so that it can't be modified by the sandbox.
 	 */
-	sbm->sbm_heapbase = sbop->sbo_heapbase;
-	sbm->sbm_heaplen = sbop->sbo_heaplen;
+	sbmp->sbm_heapbase = sbop->sbo_heapbase;
+	sbmp->sbm_heaplen = sbop->sbo_heaplen;
 	if (mprotect(base, METADATA_SIZE, PROT_READ) < 0) {
 		saved_errno = errno;
 		warn("%s: mprotect metadata", __func__);
@@ -217,25 +222,42 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	typecap = cheri_type_alloc();
 
 	/*
-	 * Construct code capability.
+	 * Construct capabilities for run-time linker vector.
 	 *
-	 * XXXRW: Do we really need CHERI_PERM_LOAD?
+	 * NB: Currently, the only difference between the rtld vector and the
+	 * ccall vector is the vector address.
+	 *
+	 * XXXRW: We use the same type for both the run-time linker vector and
+	 * the CCall vector.  Is this OK?
 	 */
 	codecap = cheri_ptrperm(sbop->sbo_mem, sbcp->sbc_sandboxlen,
 	    CHERI_PERM_GLOBAL | CHERI_PERM_LOAD | CHERI_PERM_EXECUTE);
-	codecap = cheri_setoffset(codecap, SANDBOX_ENTRY);
-	sbop->sbo_cheri_object.co_codecap = cheri_seal(codecap, typecap);
+	codecap = cheri_setoffset(codecap, SANDBOX_RTLD_VECTOR);
+	sbop->sbo_cheri_object_rtld.co_codecap = cheri_seal(codecap, typecap);
 
-	/*
-	 * Construct data capability.  For now, allow storing local
-	 * capabilities ... but we will stop doing this once the stack
-	 * capability stops being derived from the data capability on entry.
-	 */
 	datacap = cheri_ptrperm(sbop->sbo_mem, sbcp->sbc_sandboxlen,
 	    CHERI_PERM_GLOBAL | CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP |
 	    CHERI_PERM_STORE | CHERI_PERM_STORE_CAP |
 	    CHERI_PERM_STORE_LOCAL_CAP);
-	sbop->sbo_cheri_object.co_datacap = cheri_seal(datacap, typecap);
+	sbop->sbo_cheri_object_rtld.co_datacap = cheri_seal(datacap, typecap);
+
+	/*
+	 * Construct capabilities for CCall vector.
+	 *
+	 * XXXRW: Does the code capability need CHERI_PERM_LOAD?
+	 */
+	codecap = cheri_ptrperm(sbop->sbo_mem, sbcp->sbc_sandboxlen,
+	    CHERI_PERM_GLOBAL | CHERI_PERM_LOAD | CHERI_PERM_EXECUTE);
+	codecap = cheri_setoffset(codecap, SANDBOX_INVOKE_VECTOR);
+	sbop->sbo_cheri_object_invoke.co_codecap =
+	    cheri_seal(codecap, typecap);
+
+	datacap = cheri_ptrperm(sbop->sbo_mem, sbcp->sbc_sandboxlen,
+	    CHERI_PERM_GLOBAL | CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP |
+	    CHERI_PERM_STORE | CHERI_PERM_STORE_CAP |
+	    CHERI_PERM_STORE_LOCAL_CAP);
+	sbop->sbo_cheri_object_invoke.co_datacap =
+	    cheri_seal(datacap, typecap);
 
 	/*
 	 * Construct an object capability for the system-class instance that
@@ -253,19 +275,28 @@ sandbox_object_load(struct sandbox_class *sbcp, struct sandbox_object *sbop)
 	codecap = cheri_getpcc();
 	codecap = cheri_setoffset(codecap,
 	    (register_t)CHERI_CLASS_ENTRY(libcheri_system));
-	sbop->sbo_cheri_system_object.co_codecap = cheri_seal(codecap,
+	sbop->sbo_cheri_object_system.co_codecap = cheri_seal(codecap,
 	    typecap);
 
 	/*
 	 * Construct a data capability describing the sandbox structure
 	 * itself, which allows the system class to identify the sandbox a
-	 * request is being issued from.
+	 * request is being issued from.  Embed saved $c0 as first field to
+	 * allow the ambient MIPS environment to be installed.
 	 */
 	datacap = cheri_ptrperm(sbop, sizeof(*sbop), CHERI_PERM_GLOBAL |
 	    CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE |
 	    CHERI_PERM_STORE_CAP | CHERI_PERM_STORE_LOCAL_CAP);
-	sbop->sbo_cheri_system_object.co_datacap = cheri_seal(datacap,
+	sbop->sbo_cheri_object_system.co_datacap = cheri_seal(datacap,
 	    typecap);
+
+	/*
+	 * Install a reference to the system object in the class.
+	 *
+	 * XXXRW: Possibly, this should be !CHERI_PERM_GLOBAL -- but we do not
+	 * currently support invoking non-global objects.
+	 */
+	sbmp->sbm_system_object = sbop->sbo_cheri_object_system;
 	return (0);
 
 error:

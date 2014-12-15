@@ -136,7 +136,6 @@ gzip_h.o:
 gzip_u_libz_h1.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -c gzip.c -o gzip_u_libz_h1.o
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -E gzip.c -o gzip_u_libz_h1.E
-		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_H1_CFLAGS) -S -emit-llvm gzip.c -o gzip_u_libz_h1.S
 
 gzip_u_libz_hm.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_HM_CFLAGS) -c gzip.c -o gzip_u_libz_hm.o
@@ -195,7 +194,7 @@ gzip_a_libz_c: gzip_a_libz_c.o gzsandbox_a_libz_c.o libz_c libsep
 		$(CC) $(CFLAGS) -o gzip_a_libz_c gzip_a_libz_c.o gzsandbox_a_libz_c.o $(GZIP_A_LIBZ_C_LDADD)
 
 clean-progs:
-		rm -f *.o gzip gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin bin.tar
+		rm -f *.o *.E gzip gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin bin.tar
 		rm -rf results
 
 push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h1 push-gzip_u_libz_hm push-gzip_u_libz_am push-gzip_u_libz_a1 push-gzip_u_libz_c push-gzip_a_libz_c push-test

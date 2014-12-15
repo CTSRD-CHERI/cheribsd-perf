@@ -75,8 +75,7 @@ time(time_t *tloc)
 {
 	struct timespec t;
 
-	if (cheri_system_clock_gettime(CLOCK_REALTIME,
-      cheri_ptr(&t, sizeof(t))) != 0)
+	if (cheri_system_clock_gettime(CLOCK_REALTIME, &t) != 0)
 		return ((time_t)-1);
 
 	if (tloc != NULL)

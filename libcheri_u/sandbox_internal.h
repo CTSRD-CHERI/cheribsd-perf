@@ -31,6 +31,10 @@
 #ifndef _SANDBOX_INTERNAL_H_
 #define	_SANDBOX_INTERNAL_H_
 
+#include <sys/stat.h>
+
+#include "cheri_class.h"
+
 extern int	sb_verbose;
 
 /*
@@ -70,13 +74,28 @@ struct sandbox_class {
  *   capability out of sandbox_object into sandbox_class.
  */
 struct sandbox_object {
+	CHERI_SYSTEM_OBJECT_FIELDS;
 	struct sandbox_class	*sbo_sandbox_classp;
 	void			*sbo_mem;
 	register_t		 sbo_sandboxlen;
 	register_t		 sbo_heapbase;
 	register_t		 sbo_heaplen;
-	struct cheri_object	 sbo_cheri_object;
-	struct cheri_object	 sbo_cheri_system_object;
+	uint			 sbo_flags;	/* Sandbox flags. */
+
+	/*
+	 * The object's own code and data capabilities.
+	 */
+	struct cheri_object	 sbo_cheri_object_rtld;
+	struct cheri_object	 sbo_cheri_object_invoke;
+
+	/*
+	 * System-object capabilities that can be passed to the object.
+	 */
+	struct cheri_object	 sbo_cheri_object_system;
+
+	/*
+	 * Sandbox statistics.
+	 */
 	struct sandbox_object_stat	*sbo_sandbox_object_statp;
 };
 
