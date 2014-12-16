@@ -3,6 +3,7 @@
 #
 
 .include "../../cheridefs.mk"
+CFLAGS+=-DNO_SANDBOX
 
 SRCS=	crt_invoke.S				\
 	crt_rtld.S				\

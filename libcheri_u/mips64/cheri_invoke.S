@@ -161,7 +161,19 @@ cheri_invoke_bundle_idc:
 	# and IDC, so we don't need to.
 	#
 cheri_invoke_ccall:
+#ifdef NO_SANDBOX
+	# Manually unseal the code and data capabilities.
+	cgettype $at, $c1
+	csetoffset $c0, $c0, $at
+	cunseal $c1, $c1, $c0
+	cgettype $at, $c2
+	csetoffset $c0, $c0, $at
+	cunseal $c2, $c2, $c0
+	cjalr	$c24, $c1
+	nop
+#else
 	ccall	$c1, $c2
+#endif
 
 	#
 	# Restore $idc-saved recovery state; $idc must be restored last.  The

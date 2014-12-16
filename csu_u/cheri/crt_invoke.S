@@ -91,9 +91,23 @@ __invoke_vector:
 	# remove these candperms once that is present.
 	#
 	dli	$t0, (~CHERI_PERM_GLOBAL)
+#ifdef NO_SANDBOX
+	# c26 is not set up yet; callee needs to save (for now)
+	candperm	$c11, $c2, $t0
+	cgetlen	$sp, $c2
+#else
 	candperm	$c11, $c26, $t0
 	cgetlen	$sp, $c26
+#endif
 	move	$fp, $sp
+
+#ifdef NO_SANDBOX
+	# Save $c26 (IDC), $c24 (RA)
+	daddiu $sp, -64
+	csc $c24, $sp, 32($c11)
+	csc $c26, $sp, 0($c11)
+	cmove $c26, $c2
+#endif
 
 	#
 	# Install $idc as $c0.  From here on out, we can do MIPS fetches and
@@ -138,7 +152,15 @@ creturn_target:
 	#
 	# Return to caller.
 	#
+#ifdef NO_SANDBOX
+	# restore $c26, $c24 and return
+	clc $c24, $sp, 32($c11)
+	clc $c26, $sp, 0($c11)
+	daddiu $sp, 64
+	cjr $c24
+#else
 	creturn
+#endif
 	.end __invoke_vector
 
 	.global abort

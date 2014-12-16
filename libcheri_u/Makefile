@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 .include "../cheridefs.mk"
+CFLAGS+=	-DNO_SANDBOX
 
 SRCS=	cheri_invoke.S			\
 	cheri_enter.c			\
