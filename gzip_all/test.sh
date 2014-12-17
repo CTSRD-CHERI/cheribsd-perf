@@ -331,6 +331,40 @@ case4 ()
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }
 
+case5 ()
+{
+  CASE=5
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="4096 524288"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hj1"
+  else
+    nrun=3
+    SIZES="4096 8192 524288 1048576 2097152"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hj1"
+  fi
+  runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
+}
+
+case6 ()
+{
+  CASE=6
+  if [ ! -n "$LONG_RUN" ]
+  then
+    nrun=1
+    SIZES="524288 1048576 2097152"
+    BUFLENS="512 4096 65536"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hj1"
+  else
+    nrun=3
+    SIZES="524288 1048576 2097152"
+    BUFLENS="512 1024 4096 65536 131072"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hj1"
+  fi
+  runtest buflen_test init_buflen_test gen_buflen_file_list SIZES bytes BUFLENS bytes
+}
+
 runtests ()
 {
   rm -f failures
@@ -339,11 +373,13 @@ runtests ()
   #runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
   #runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 
-  LONG_RUN=1
-  case1
+  #LONG_RUN=1
+  #case1
   #case2
-  case3
+  #case3
   #case4
+  case5
+  case6
   
   cat failures
 }
@@ -352,7 +388,7 @@ push ()
 {
   rm -f results.tar
   tar cf results.tar results*
-  ~/myncp/myproto 192.168.1.99 8888 results.tar results.tar
+  n localhost 8898 results.tar results.tar
 }
 
 all ()

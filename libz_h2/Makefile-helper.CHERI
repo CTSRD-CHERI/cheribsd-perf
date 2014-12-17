@@ -1,31 +1,38 @@
 .include "../cheridefs.mk"
 
-LDFLAGS+=	-Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib
-LDFLAGS+= -Wl,-L../csu_u/cheri
+LDFLAGS_U=$(LDFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib -Wl,-L../csu_u/cheri
+LDFLAGS_J=$(LDFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD_J) -nostdlib -Wl,-L../csu_u/cheri
 LDADD=  libz_h.a ../libc_cheri_u/libc_cheri.a
 CFLAGS+=-DZLIB_INCL_SANDBOX
 CFLAGS+=-mabi=sandbox
 
 CFLAGS+=$(OPTCFLAGS)
 
-FILES=lzsandbox-helper.bin
-CLEANFILES=lzsandbox-helper.bin
+FILES=lzsandbox-helper_u.bin lzsandbox-helper_j.bin
+CLEANFILES=lzsandbox-helper_u.bin lzsandbox-helper_j.bin
 
-all: lzsandbox-helper.bin
+all: lzsandbox-helper_u.bin lzsandbox-helper_j.bin
 
 .c.o: $<
 	$(CC) $(CFLAGS) -o $@ -c $<
 	$(CC) $(CFLAGS) -emit-llvm -o $@.S -S $<
 	$(CC) $(CFLAGS) -o $@.E -E $<
 
-lzsandbox-helper: lzsandbox-helper.o libz_h.a
-	$(CC) $(LDFLAGS) -o ${.TARGET} ${.ALLSRC} $(LDADD)
+lzsandbox-helper_u: lzsandbox-helper.o libz_h.a
+	$(CC) $(LDFLAGS_U) -o ${.TARGET} ${.ALLSRC} $(LDADD)
 
-lzsandbox-helper.bin: lzsandbox-helper
+lzsandbox-helper_j: lzsandbox-helper.o libz_h.a
+	$(CC) $(LDFLAGS_J) -o ${.TARGET} ${.ALLSRC} $(LDADD)
+
+lzsandbox-helper_u.bin: lzsandbox-helper_u
+	$(CHERI_SDK)/bin/objcopy -S -O binary ${.ALLSRC} ${.TARGET}
+
+lzsandbox-helper_j.bin: lzsandbox-helper_j
 	$(CHERI_SDK)/bin/objcopy -S -O binary ${.ALLSRC} ${.TARGET}
 
 push:
-		$(CHERI_PUSH) lzsandbox-helper.bin lzsandbox-helper.bin
+		$(CHERI_PUSH) lzsandbox-helper_u.bin lzsandbox-helper_u.bin
+		$(CHERI_PUSH) lzsandbox-helper_j.bin lzsandbox-helper_j.bin
 
 clean:
-		rm -f lzsandbox-helper.o lzsandbox-helper.bin lzsandbox-helper libzwrapper.a
+		rm -f lzsandbox-helper*.o lzsandbox-helper*.bin lzsandbox-helper_u lzsandbox-helper_j libzwrapper.a

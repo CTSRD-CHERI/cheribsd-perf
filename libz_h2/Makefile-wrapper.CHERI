@@ -10,15 +10,23 @@ zwrapper1.o: zwrapper.c
 zwrapperm.o: zwrapper.c
 		$(CC) $(CFLAGS) -c zwrapper.c -o zwrapperm.o
 
-all: zwrapper1.o zwrapperm.o
-	mkdir -p tmpdir
-	cd tmpdir && \
-	$(AR) -x ../../libcheri_u/libcheri.a && \
+zwrapper1j.o: zwrapper.c
+		$(CC) $(CFLAGS) -DNO_CCALL -DLZ_SINGLE_SANDBOX -c zwrapper.c -o zwrapper1j.o
+
+all: zwrapper1.o zwrapper1j.o zwrapperm.o
+	mkdir -p tmpdir_u
+	cd tmpdir_u && \
+	$(AR) -x ../../libcheri_u/libcheri_u.a && \
 	cd ..
-	$(AR) -r libzwrapper1.a zwrapper1.o tmpdir/*.o
-	$(AR) -r libzwrapperm.a zwrapperm.o tmpdir/*.o
+	mkdir -p tmpdir_j
+	cd tmpdir_j && \
+	$(AR) -x ../../libcheri_u/libcheri_j.a && \
+	cd ..
+	$(AR) -r libzwrapper1.a zwrapper1.o tmpdir_u/*.o
+	$(AR) -r libzwrapperm.a zwrapperm.o tmpdir_u/*.o
+	$(AR) -r libzwrapper1j.a zwrapper1j.o tmpdir_j/*.o
 
 clean:
 	rm -f *.a *.so *.o *.so.1
-	rm -rf tmpdir
+	rm -rf tmpdir_u tmpdir_j
 

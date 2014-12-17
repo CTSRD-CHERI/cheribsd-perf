@@ -22,7 +22,11 @@ static struct    sandbox_object * sbop;
 /* stderr for debugging only */
 struct cheri_object stderrfd;
 
-#define LZ_SANDBOX_BIN "lzsandbox-helper.bin"
+#ifdef NO_CCALL
+#define LZ_SANDBOX_BIN "lzsandbox-helper_j.bin"
+#else
+#define LZ_SANDBOX_BIN "lzsandbox-helper_u.bin"
+#endif
 #define LZ_SANDBOX_HEAP_SIZE (4*1048576)
 
 /* returns non-zero iff s is a subcapability of b */

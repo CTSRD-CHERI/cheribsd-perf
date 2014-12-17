@@ -161,7 +161,7 @@ cheri_invoke_bundle_idc:
 	# and IDC, so we don't need to.
 	#
 cheri_invoke_ccall:
-#ifdef NO_SANDBOX
+#ifdef NO_CCALL
 	# Manually unseal the code and data capabilities.
 	cgettype $at, $c1
 	csetoffset $c0, $c0, $at

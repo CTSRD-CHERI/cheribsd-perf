@@ -25,8 +25,8 @@ run_ministat ()
     cat tmp | head -n 1 | awk '{print $1}' > $stat_file
   else
     # discard first result
-    cat tmp | awk '{if (x) print $0; else x=1;}' > tmp2
-    mv tmp2 tmp
+    #cat tmp | awk '{if (x) print $0; else x=1;}' > tmp2
+    #mv tmp2 tmp
     cat tmp | ministat -n > $stat_file
   fi
 }
@@ -256,6 +256,31 @@ process_tests ()
   ylabel="total time (seconds)"
   title="CASE $CASE: capability overhead: compression time for 3 files (individually)"
   process_test
+  
+  CASE=5
+  filter_inner=
+  filter_outer=
+  prefix=compress_time_test
+  y_var=avg_time
+  x_var=x_outer
+  xlabel="bytes total"
+  ylabel="total time (seconds)"
+  title="CASE $CASE: CCall vs CJALR: vary file size"
+  process_test
+  
+  CASE=6
+  filter_inner=
+  prefix=buflen_test
+  y_var=avg_time
+  x_var=BUFLEN
+  xlabel="buffer size (bytes)"
+  ylabel="total time (seconds)"
+  for sz in 524288 1048576 2097152
+  do
+    filter_outer=-$sz
+    title="CASE $CASE: CCall vs CJALR: vary buffer size (file size $sz)"
+    process_test
+  done
 }
 
 process_tests_example ()

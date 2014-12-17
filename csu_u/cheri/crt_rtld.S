@@ -59,7 +59,7 @@ __rtld_vector:
 	# remove these candperms once that is present.
 	#
 	dli	$t0, (~CHERI_PERM_GLOBAL)
-#ifdef NO_SANDBOX
+#ifdef NO_CCALL
 	# c26 is not set up yet; callee needs to save (for now)
 	candperm	$c11, $c2, $t0
 	cgetlen	$sp, $c2
@@ -69,7 +69,7 @@ __rtld_vector:
 #endif
 	move	$fp, $sp
 
-#ifdef NO_SANDBOX
+#ifdef NO_CCALL
 	# Save $c26 (IDC), $c24 (RA)
 	daddiu $sp, -64
 	csc $c24, $sp, 32($c11)
@@ -125,7 +125,7 @@ creturn_target:
 	#
 	# Return to caller.
 	#
-#ifdef NO_SANDBOX
+#ifdef NO_CCALL
 	# restore $c26, $c24 and return
 	clc $c24, $sp, 32($c11)
 	clc $c26, $sp, 0($c11)
