@@ -30,7 +30,7 @@ GZIP_A_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
 GZIP_U_LDADD=../libz_all/libz_u.a
 GZIP_A_LDADD=../libz_all/libz_u.a ../libsep/libsep.a
 GZIP_H_LDADD=../libcheri_u/libcheri_u.a
-GZIP_H_HELPER_LDADD=../libz_all/libz_u.a ../libc_cheri_u/libc_cheri.a
+GZIP_H_HELPER_LDADD=../libz_all/libz_u.a ../libc_cheri_u/libc_cheri_u.a
 GZIP_U_LIBZ_H1_LDADD=../libz_h2/libzwrapper1.a
 GZIP_U_LIBZ_HM_LDADD=../libz_h2/libzwrapperm.a
 GZIP_U_LIBZ_A1_LDADD=../libz_all/libz_a1.a
@@ -119,11 +119,11 @@ clean-libcheri_u:
 libc_cheri_u:
 		cd ../libc_cheri_u && \
 		touch cheri_invoke.So && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
 
 clean-libc_cheri_u:
 		cd ../libc_cheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o

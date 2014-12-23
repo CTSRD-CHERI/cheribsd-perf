@@ -2,7 +2,8 @@
 
 LDFLAGS_U=$(LDFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -nostdlib -Wl,-L../csu_u/cheri
 LDFLAGS_J=$(LDFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD_J) -nostdlib -Wl,-L../csu_u/cheri
-LDADD=  libz_h.a ../libc_cheri_u/libc_cheri.a
+LDADD_U=  libz_h.a ../libc_cheri_u/libc_cheri_u.a
+LDADD_J=  libz_h.a ../libc_cheri_u/libc_cheri_j.a
 CFLAGS+=-DZLIB_INCL_SANDBOX
 CFLAGS+=-mabi=sandbox
 
@@ -19,10 +20,10 @@ all: lzsandbox-helper_u.bin lzsandbox-helper_j.bin
 	$(CC) $(CFLAGS) -o $@.E -E $<
 
 lzsandbox-helper_u: lzsandbox-helper.o libz_h.a
-	$(CC) $(LDFLAGS_U) -o ${.TARGET} ${.ALLSRC} $(LDADD)
+	$(CC) $(LDFLAGS_U) -o ${.TARGET} ${.ALLSRC} $(LDADD_U)
 
 lzsandbox-helper_j: lzsandbox-helper.o libz_h.a
-	$(CC) $(LDFLAGS_J) -o ${.TARGET} ${.ALLSRC} $(LDADD)
+	$(CC) $(LDFLAGS_J) -o ${.TARGET} ${.ALLSRC} $(LDADD_J)
 
 lzsandbox-helper_u.bin: lzsandbox-helper_u
 	$(CHERI_SDK)/bin/objcopy -S -O binary ${.ALLSRC} ${.TARGET}

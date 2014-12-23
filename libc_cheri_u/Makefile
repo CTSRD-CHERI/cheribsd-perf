@@ -10,6 +10,12 @@
 # code, and local libc_cheri code, that is also thrown into the mix as well.)
 #
 
+.include "../cheridefs.mk"
+CFLAGS+=-mabi=sandbox
+
+# "_u" targets: unmodified
+# "_j" targets: CCall replaced with CJALR
+
 # libcheri
 LIB=		c_cheri
 SRCS=		cheri_clock_gettime.c	\
@@ -21,11 +27,11 @@ SRCS=		cheri_clock_gettime.c	\
 		cheri_stub.c		\
 		fastmalloc.c
 
-CFLAGS+=	-I${.CURDIR}/../libc/include \
-		-I${.CURDIR}/../libc/locale \
-		-I${.CURDIR}/../libc/mips \
-		-I${.CURDIR}/../../contrib/gdtoa \
-		-I${.CURDIR}/../../contrib/tzcode/stdtime
+CFLAGS+=	-I$(CHERIBSD)/lib/libc/include \
+		-I$(CHERIBSD)/lib/libc/locale \
+		-I$(CHERIBSD)/lib/libc/mips \
+		-I$(CHERIBSD)/contrib/gdtoa \
+		-I$(CHERIBSD)/contrib/tzcode/stdtime
 
 # libc/gdtoa
 CFLAGS.misc.c=	-Wno-sign-compare
@@ -248,8 +254,8 @@ NO_WERROR=	yes
 
 CLEANFILES=	cheri_invoke.o
 
-LIBC_DIR=${.CURDIR}/../libc
-LIBCHERI_DIR=${.CURDIR}/../libcheri
+LIBC_DIR=$(CHERIBSD)/lib/libc
+LIBCHERI_DIR=${.CURDIR}/../libcheri_u
 
 .if exists(${LIBC_DIR}/${MACHINE_ARCH})
 LIBC_ARCH=${MACHINE_ARCH}
@@ -266,8 +272,8 @@ CFLAGS+=	-I${LIBC_DIR}/include			\
 		-I${LIBC_DIR}/string			\
 		-I${LIBC_DIR}/stdlib			\
 		-I${LIBC_DIR}/stdtime			\
-		-I${.CURDIR}/../../contrib/gdtoa	\
-		-I${.CURDIR}/../../include
+		-I$(CHERIBSD)/contrib/gdtoa	\
+		-I$(CHERIBSD)/include
 
 .PATH: ${.CURDIR}/${MACHINE_ARCH}
 .PATH: ${LIBCHERI_DIR}
@@ -287,21 +293,47 @@ CFLAGS+=	-I${LIBC_DIR}/include			\
 .PATH: ${LIBC_DIR}/softfloat/bits64
 .PATH: ${LIBC_DIR}/stdlib
 .PATH: ${LIBC_DIR}/stdtime
-.PATH: ${.CURDIR}/../../contrib/compiler-rt/lib
-.PATH: ${.CURDIR}/../../contrib/gdtoa
-.PATH: ${.CURDIR}/../../sys/kern
-.PATH: ${.CURDIR}/../../contrib/tzcode/stdtime
+.PATH: $(CHERIBSD)/contrib/compiler-rt/lib
+.PATH: $(CHERIBSD)/contrib/gdtoa
+.PATH: $(CHERIBSD)/sys/kern
+.PATH: $(CHERIBSD)/contrib/tzcode/stdtime
 
 CFLAGS+=	-Wno-cast-align -DFORCE_C_LOCALE -DFORCE_UTC_TZ
-
-.include <src.opts.mk>
-.include <bsd.lib.mk>
 
 CFLAGS+= ${CFLAGS.${.IMPSRC:T}}
 
 SCRIPTDIR=	/usr/libdata/ldscripts
 LDSCRIPTS=	sandbox.ld
 
-afterinstall:
-	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-	    ${.CURDIR}/${LDSCRIPTS} ${DESTDIR}${SCRIPTDIR}
+OBJS:=$(SRCS:S/.c/.o/g)
+OBJS:=$(OBJS:S/.S/.o/g)
+OBJS:=$(OBJS:S/.s/.o/g)
+
+OBJS_U=$(OBJS) cheri_invoke_u.o
+OBJS_J=$(OBJS) cheri_invoke_j.o
+
+all: libc_cheri_u.a libc_cheri_j.a
+
+.c.o:
+	$(CC) $(CFLAGS) -o ${.TARGET} -c ${.ALLSRC}
+
+.s.o:
+	$(AS) -o ${.TARGET} ${.ALLSRC}
+
+.S.o:
+	$(CC) $(CFLAGS) -o ${.TARGET} -c ${.ALLSRC}
+
+cheri_invoke_u.o: cheri_invoke.S
+	$(CC) $(CFLAGS) -o ${.TARGET} -c ${.ALLSRC}
+
+cheri_invoke_j.o: cheri_invoke.S
+	$(CC) $(CFLAGS) -DNO_CCALL -o ${.TARGET} -c ${.ALLSRC}
+
+libc_cheri_u.a: $(OBJS_U)
+	$(AR) -r ${.TARGET} ${.ALLSRC}
+
+libc_cheri_j.a: $(OBJS_J)
+	$(AR) -r ${.TARGET} ${.ALLSRC}
+
+clean:
+	rm -f *.o *.So *.po *.a *.so *.so.1
