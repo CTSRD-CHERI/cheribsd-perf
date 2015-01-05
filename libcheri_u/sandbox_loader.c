@@ -28,6 +28,7 @@
  * SUCH DAMAGE.
  */
 
+#ifndef SABI_ONLY
 #include <sys/cdefs.h>
 
 #if !__has_feature(capabilities)
@@ -326,3 +327,4 @@ sandbox_class_getlength(struct sandbox_class *sbcp)
 
 	return (sbcp->sbc_sandboxlen);
 }
+#endif /* !SABI_ONLY */

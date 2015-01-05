@@ -201,14 +201,14 @@ const z_crc_t FAR * ZEXPORT get_crc_table()
 #define DO8 DO1; DO1; DO1; DO1; DO1; DO1; DO1; DO1
 
 /* ========================================================================= */
-unsigned long ZEXPORT crc32(crc, buf, len)
+/*unsigned long ZEXPORT crc32(crc, buf, len)
     unsigned long crc;
     const unsigned char FAR *buf;
     uInt len;
 {
 	return (crc32_c(crc, buf ? cheri_ptrperm((void *)buf, len, CHERI_PERM_LOAD) : buf,
 	    len));
-}
+}*/
 
 unsigned long ZEXPORT crc32_c(crc, buf, len)
     unsigned long crc;

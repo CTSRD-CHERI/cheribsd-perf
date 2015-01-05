@@ -66,6 +66,37 @@
  * knowing when it is safe (or perhaps never calling it).
  */
 
+#ifdef SABI_ONLY
+int
+cheri_fd_new(int fd, struct cheri_object *cop)
+{
+	int *fdp;
+
+	fdp = malloc(sizeof(*fdp));
+	if (fdp == NULL) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	cop->co_datacap = cheri_ptr(fdp, sizeof(*fdp));
+	return (0);
+}
+
+void
+cheri_fd_revoke(struct cheri_object co)
+{
+	__capability int *fdp;
+
+	fdp = co.co_datacap;
+	*fdp = -1;
+}
+
+void
+cheri_fd_destroy(struct cheri_object co)
+{
+
+	free((void *)co.co_datacap);
+}
+#else /* !SABI_ONLY */
 CHERI_CLASS_DECL(cheri_fd);
 
 static __capability void	*cheri_fd_type;
@@ -321,3 +352,4 @@ cheri_fd_enter(register_t methodnum, register_t a1, register_t a2,
 		return (ret);
 	}
 }
+#endif /* SABI_ONLY */

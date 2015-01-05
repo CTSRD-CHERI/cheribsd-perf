@@ -29,6 +29,7 @@
  * SUCH DAMAGE.
  */
 
+#ifndef SABI_ONLY
 #include <sys/types.h>
 
 #include <machine/cheri.h>
@@ -226,3 +227,4 @@ cheri_system_enter(register_t methodnum, register_t a1, register_t a2,
 		return (-1);
 	}
 }
+#endif /* !SABI_ONLY */

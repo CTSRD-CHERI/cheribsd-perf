@@ -31,6 +31,8 @@
 #ifndef _CHERI_INVOKE_H_
 #define	_CHERI_INVOKE_H_
 
+#ifndef SABI_ONLY
+
 #if __has_feature(capabilities)
 register_t	cheri_invoke(struct cheri_object co,
 		    register_t a0, register_t a1, register_t a2,
@@ -45,5 +47,7 @@ register_t	cheri_invoke(register_t a0, register_t a1, register_t a2,
 		    register_t a3, register_t a4, register_t a5,
 		    register_t a6, register_t a7);
 #endif
+
+#endif /* !SABI_ONLY */
 
 #endif /* !_CHERI_INVOKE_H_ */

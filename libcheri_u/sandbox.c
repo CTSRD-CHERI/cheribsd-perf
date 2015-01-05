@@ -75,6 +75,41 @@ sandbox_init(void)
 		sb_verbose = 1;
 }
 
+#ifdef SABI_ONLY
+int
+sandbox_class_new(const char *path, size_t sandboxlen,
+    struct sandbox_class **sbcpp)
+{
+
+	(void)path;
+	(void)sandboxlen;
+	(void)sbcpp;
+	return (0);
+}
+
+void
+sandbox_class_destroy(struct sandbox_class *sbcp)
+{
+
+	(void)sbcp;
+}
+
+int
+sandbox_object_new(struct sandbox_class *sbcp, struct sandbox_object **sbopp)
+{
+
+	(void)sbcp;
+	(void)sbopp;
+	return (0);
+}
+
+void
+sandbox_destroy(struct sandbox *sb)
+{
+
+	(void)sb;
+}
+#else /* !SABI_ONLY */
 int
 sandbox_class_new(const char *path, size_t sandboxlen,
     struct sandbox_class **sbcpp)
@@ -429,3 +464,4 @@ sandbox_invoke(struct sandbox *sb, register_t a0, register_t a1,
 	return (sandbox_object_invoke(sb->sb_sandbox_objectp, a0, a1, a2, a3,
 	    0, 0, 0, 0, c3p, c4p, c5p, c6p, c7p, c8p, c9p, c10p));
 }
+#endif /* !SABI_ONLY */

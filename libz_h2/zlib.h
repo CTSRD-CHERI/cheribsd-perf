@@ -370,7 +370,7 @@ ZEXTERN int ZEXPORT deflateInit OF((z_streamp strm, int level));
 */
 
 
-ZEXTERN int ZEXPORT deflate_c OF((z_streamp strm, int flush));
+ZEXTERN int ZEXPORT deflate_c OF((__capability z_stream_cap *strm, int flush));
 ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
 /*
     deflate compresses as much data as possible, and stops when the input
@@ -479,6 +479,7 @@ ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
 
 
 ZEXTERN int ZEXPORT deflateEnd OF((z_streamp strm));
+ZEXTERN int ZEXPORT deflateEnd_c OF((__capability z_stream_cap *strm));
 /*
      All dynamically allocated data structures for this stream are freed.
    This function discards any unprocessed input and does not flush any pending
@@ -517,7 +518,7 @@ ZEXTERN int ZEXPORT inflateInit OF((z_streamp strm));
 */
 
 
-ZEXTERN int ZEXPORT inflate_c OF((z_streamp strm, int flush));
+ZEXTERN int ZEXPORT inflate_c OF((__capability z_stream_cap *strm, int flush));
 ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
 /*
     inflate decompresses as much data as possible, and stops when the input
@@ -635,6 +636,7 @@ ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
 
 
 ZEXTERN int ZEXPORT inflateEnd OF((z_streamp strm));
+ZEXTERN int ZEXPORT inflateEnd_c OF((__capability z_stream_cap *strm));
 /*
      All dynamically allocated data structures for this stream are freed.
    This function discards any unprocessed input and does not flush any pending
@@ -776,6 +778,7 @@ ZEXTERN int ZEXPORT deflateCopy OF((z_streamp dest,
 */
 
 ZEXTERN int ZEXPORT deflateReset OF((z_streamp strm));
+ZEXTERN int ZEXPORT deflateReset_c OF((__capability z_stream_cap *strm));
 /*
      This function is equivalent to deflateEnd followed by deflateInit,
    but does not free and reallocate all the internal compression state.  The
@@ -1772,12 +1775,12 @@ ZEXTERN int ZEXPORT deflateInit_ OF((z_streamp strm, int level,
                                      const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateInit_ OF((z_streamp strm,
                                      const char *version, int stream_size));
-ZEXTERN int ZEXPORT deflateInit2_c OF((z_streamp strm, __capability void * vparams));
+ZEXTERN int ZEXPORT deflateInit2_c OF((__capability z_stream_cap *strm, __capability void * vparams));
 ZEXTERN int ZEXPORT deflateInit2_ OF((z_streamp strm, int  level, int  method,
                                       int windowBits, int memLevel,
                                       int strategy, const char *version,
                                       int stream_size));
-ZEXTERN int ZEXPORT inflateInit2_c OF((z_streamp strm, __capability void * vparams));
+ZEXTERN int ZEXPORT inflateInit2_c OF((__capability z_stream_cap *strm, __capability void * vparams));
 ZEXTERN int ZEXPORT inflateInit2_ OF((z_streamp strm, int  windowBits,
                                       const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,

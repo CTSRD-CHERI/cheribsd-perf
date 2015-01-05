@@ -44,6 +44,7 @@
 
 #include "cheri_type.h"
 
+#ifndef SABI_ONLY
 static uint64_t cheri_type_next = 1;
 
 /*
@@ -60,3 +61,4 @@ cheri_type_alloc(void)
 	cheri_type_next++;
 	return (cheri_maketype(v, CHERI_PERM_GLOBAL | CHERI_PERM_SEAL));
 }
+#endif /* !SABI_ONLY */

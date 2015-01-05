@@ -37,6 +37,59 @@
 
 #include <unistd.h>
 
+#ifdef SABI_ONLY
+struct cheri_fd_ret
+cheri_fd_fstat_c(struct cheri_object fd_object,
+    struct stat *sb)
+{
+	struct cheri_fd_ret ret;
+	int fd;
+
+	fd = fd_object.num;
+	ret.cfr_retval0 = fstat(fd, sb);
+	ret.cfr_retval1 = (ret.cfr_retval0 < 0 ? errno : 0);
+	return (ret);
+}
+
+struct cheri_fd_ret
+cheri_fd_lseek_c(struct cheri_object fd_object,
+    off_t offset, int whence)
+{
+	struct cheri_fd_ret ret;
+	int fd;
+
+	fd = fd_object.num;
+	ret.cfr_retval0 = lseek(fd, offset, whence);
+	ret.cfr_retval1 = (ret.cfr_retval0 < 0 ? errno : 0);
+	return (ret);
+}
+
+struct cheri_fd_ret
+cheri_fd_read_c(struct cheri_object fd_object,
+    void *buf)
+{
+	struct cheri_fd_ret ret;
+	int fd;
+	fd = fd_object.num;
+
+	ret.cfr_retval0 = read(fd, buf, cheri_getlen(buf));
+	ret.cfr_retval1 = (ret.cfr_retval0 < 0 ? errno : 0);
+	return (ret);
+}
+
+struct cheri_fd_ret
+cheri_fd_write_c(struct cheri_object fd_object,
+    const void *buf)
+{
+	struct cheri_fd_ret ret;
+	int fd;
+	fd = fd_object.num;
+
+	ret.cfr_retval0 = write(fd, buf, cheri_getlen(buf));
+	ret.cfr_retval1 = (ret.cfr_retval0 < 0 ? errno : 0);
+	return (ret);
+}
+#else /* !SABI_ONLY */
 /*
  * This C file contains stubs to invoke the CHERI fd class, one per method.
  */
@@ -87,3 +140,4 @@ cheri_fd_write_c(struct cheri_object fd_object, __capability const void *buf_c)
 	return (cheri_invoke(fd_object, cheri_fd_methodnum_write_c, 0, 0,
 	    (__capability void *)buf_c));
 }
+#endif /* SABI_ONLY */

@@ -226,7 +226,7 @@ int ZEXPORT inflateInit2_c (z_streamp strm, __capability void * vparams)
     return ret;
 }
 
-int ZEXPORT inflateInit_(strm, version, stream_size)
+/*int ZEXPORT inflateInit_(strm, version, stream_size)
 z_streamp strm;
 const char *version;
 int stream_size;
@@ -237,7 +237,7 @@ int stream_size;
     params.version = version ? cheri_ptr((void*)version, strlen(version)+1) : version;
     params.stream_size = stream_size;
     return inflateInit2_c(strm, cheri_ptr(&params, sizeof params));
-}
+}*/
 
 int ZEXPORT inflatePrime(strm, bits, value)
 z_streamp strm;
@@ -454,7 +454,7 @@ unsigned copy;
     do { \
         hbuf[0] = (unsigned char)(word); \
         hbuf[1] = (unsigned char)((word) >> 8); \
-        check = crc32(check, hbuf, 2); \
+        check = crc32_c(check, hbuf, 2); \
     } while (0)
 
 #  define CRC4(check, word) \
@@ -463,7 +463,7 @@ unsigned copy;
         hbuf[1] = (unsigned char)((word) >> 8); \
         hbuf[2] = (unsigned char)((word) >> 16); \
         hbuf[3] = (unsigned char)((word) >> 24); \
-        check = crc32(check, hbuf, 4); \
+        check = crc32_c(check, hbuf, 4); \
     } while (0)
 #endif
 
@@ -675,7 +675,7 @@ int ZEXPORT inflate_c(z_streamp strm, int flush)
             NEEDBITS(16);
 #ifdef GUNZIP
             if ((state->wrap & 2) && hold == 0x8b1f) {  /* gzip header */
-                state->check = crc32(0L, Z_NULL, 0);
+                state->check = crc32_c(0L, Z_NULL, 0);
                 CRC2(state->check, hold);
                 INITBITS();
                 state->mode = FLAGS;
@@ -837,7 +837,7 @@ int ZEXPORT inflate_c(z_streamp strm, int flush)
                 state->head->hcrc = (int)((state->flags >> 9) & 1);
                 state->head->done = 1;
             }
-            strm->adler = state->check = crc32(0L, Z_NULL, 0);
+            strm->adler = state->check = crc32_c(0L, Z_NULL, 0);
             state->mode = TYPE;
             break;
 #endif
@@ -1282,7 +1282,7 @@ int ZEXPORT inflate_c(z_streamp strm, int flush)
     return ret;
 }
 
-int ZEXPORT inflateEnd(strm)
+int ZEXPORT inflateEnd_c(strm)
 z_streamp strm;
 {
     struct inflate_state FAR *state;

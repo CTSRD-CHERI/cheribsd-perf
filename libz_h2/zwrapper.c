@@ -16,6 +16,258 @@ extern int num_ccalls;
 extern int num_sandboxes;
 #endif /* SB_COLLECT_STATS */
 
+#ifdef SABI_ONLY
+/*
+ * The compiled-against zlib uses mabi=sandbox,
+ * but we don't, and neither does the user application.
+ */
+
+int ZEXPORT deflate (z_streamp strm, int flush)
+{
+	int rc;
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+	__capability void *in, *out;
+
+	in = strm->next_in ?
+    cheri_ptrperm(strm->next_in, strm->avail_in,
+        CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in;
+	out = strm->next_out ?
+     cheri_ptrperm(strm->next_out, strm->avail_out,
+        CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out;
+	strm_cap.next_in = in;
+	strm_cap.next_out = out;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+	strm_cap.data_type = strm->data_type;
+	strm_cap.adler = strm->adler;
+	strm_cap.reserved = strm->reserved;
+	/* XXX: TODO: zalloc,zfree,opaque */
+	strm_cap.zalloc = strm->zalloc;
+	strm_cap.zfree = strm->zfree;
+	strm_cap.opaque = strm->opaque;
+
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+
+	rc = deflate_c(strm_cap_c, flush);
+  
+	strm->next_in = (void*)strm_cap.next_in;
+	strm->next_out = (void*)strm_cap.next_out;
+	strm->avail_in = strm_cap.avail_in;
+	strm->avail_out = strm_cap.avail_out;
+	strm->total_in = strm_cap.total_in;
+	strm->total_out = strm_cap.total_out;
+	strm->state = strm_cap.state;
+	strm->data_type = strm_cap.data_type;
+	strm->adler = strm_cap.adler;
+	strm->reserved = strm_cap.reserved;
+	/* XXX: TODO: zalloc,zfree,opaque */
+	strm->zalloc = strm_cap.zalloc;
+	strm->zfree = strm_cap.zfree;
+	strm->opaque = strm_cap.opaque;
+
+	return (rc);
+}
+
+int ZEXPORT inflate (z_streamp strm, int flush)
+{
+	int rc;
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+	__capability void *in, *out;
+
+	in = strm->next_in ?
+    cheri_ptrperm(strm->next_in, strm->avail_in,
+        CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP) : strm->next_in;
+	out = strm->next_out ?
+     cheri_ptrperm(strm->next_out, strm->avail_out,
+        CHERI_PERM_STORE | CHERI_PERM_STORE_CAP) : strm->next_out;
+	strm_cap.next_in = in;
+	strm_cap.next_out = out;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+	strm_cap.data_type = strm->data_type;
+	strm_cap.adler = strm->adler;
+	strm_cap.reserved = strm->reserved;
+	/* XXX: TODO: zalloc,zfree,opaque */
+	strm_cap.zalloc = strm->zalloc;
+	strm_cap.zfree = strm->zfree;
+	strm_cap.opaque = strm->opaque;
+
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+
+	strm->next_in = (void*)strm_cap.next_in;
+	strm->next_out = (void*)strm_cap.next_out;
+	rc = inflate_c(strm_cap_c, flush);
+
+	strm->avail_in = strm_cap.avail_in;
+	strm->avail_out = strm_cap.avail_out;
+	strm->total_in = strm_cap.total_in;
+	strm->total_out = strm_cap.total_out;
+	strm->state = strm_cap.state;
+	strm->data_type = strm_cap.data_type;
+	strm->adler = strm_cap.adler;
+	strm->reserved = strm_cap.reserved;
+	/* XXX: TODO: zalloc,zfree,opaque */
+	strm->zalloc = strm_cap.zalloc;
+	strm->zfree = strm_cap.zfree;
+	strm->opaque = strm_cap.opaque;
+
+
+	return (rc);
+}
+int ZEXPORT deflateInit2_ (z_streamp strm, int level, int method,
+                           int windowBits, int memLevel,
+                           int strategy, const char *version,
+                           int stream_size)
+{
+	int rc;
+	z_stream_cap strm_cap;
+	struct lzparams params;
+	__capability z_stream_cap *strm_cap_c;
+	__capability struct lzparams *params_c;
+	
+	stream_size = sizeof(z_stream_cap);
+	memset(&strm_cap, 0, sizeof(strm_cap));
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+	params_c = cheri_ptr(&params, sizeof params);
+
+	params.strm = strm_cap_c;
+	params.level = level;
+	params.method = method;
+	params.windowBits = windowBits;
+	params.memLevel = memLevel;
+	params.strategy = strategy;
+	params.version = cheri_ptr(&version, strlen(version));
+	params.stream_size = stream_size;
+
+	rc = inflateInit2_c(strm_cap_c, params_c);
+
+	/* XXX: check that these are the only things that deflateInit2 might want to modify */
+	strm->state = strm_cap.state;
+	strm->data_type = strm_cap.data_type;
+	strm->adler = strm_cap.adler;
+	strm->reserved = strm_cap.reserved;
+	strm->zalloc = strm_cap.zalloc;
+	strm->zfree = strm_cap.zfree;
+	strm->opaque = strm_cap.opaque;
+
+	return (rc);
+}
+
+int ZEXPORT inflateInit_ (z_streamp strm,
+                           const char *version, int stream_size)
+{
+/* XXX: #define to get this to compile */
+#define DEF_WBITS 15
+  return inflateInit2_(strm, DEF_WBITS, version, stream_size);
+}
+
+int ZEXPORT inflateInit2_ (z_streamp strm, int  windowBits,
+                           const char *version, int stream_size)
+{
+	int rc;
+	z_stream_cap strm_cap;
+	struct lzparams params;
+	__capability z_stream_cap *strm_cap_c;
+	__capability struct lzparams *params_c;
+	
+	stream_size = sizeof(z_stream_cap);
+	memset(&strm_cap, 0, sizeof(strm_cap));
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+	params_c = cheri_ptr(&params, sizeof params);
+
+	params.strm = strm_cap_c;
+	params.windowBits = windowBits;
+	params.version = cheri_ptr(&version, strlen(version));
+	params.stream_size = stream_size;
+
+	rc = inflateInit2_c(strm_cap_c, params_c);
+
+	/* XXX: check that these are the only things that deflateInit2 might want to modify */
+	strm->state = strm_cap.state;
+	strm->data_type = strm_cap.data_type;
+	strm->adler = strm_cap.adler;
+	strm->reserved = strm_cap.reserved;
+	strm->zalloc = strm_cap.zalloc;
+	strm->zfree = strm_cap.zfree;
+	strm->opaque = strm_cap.opaque;
+
+	return (rc);
+}
+
+uLong ZEXPORT crc32 (uLong crc, const Bytef *buf, uInt len)
+{
+	__capability const Bytef *buf_c;
+
+	buf_c = buf ? cheri_ptr((void*)buf, len) : buf;
+	return (crc32_c(crc, buf_c, len));
+}
+
+int ZEXPORT inflateEnd (z_streamp strm)
+{
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+
+	/* XXX: check that these are the only things that inflateEnd might need... */
+	strm_cap.next_in = NULL;
+	strm_cap.next_out = NULL;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+
+	return (inflateEnd_c(strm_cap_c));
+}
+
+int ZEXPORT deflateEnd (z_streamp strm)
+{
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+
+	/* XXX: check that these are the only things that deflateEnd might need... */
+	strm_cap.next_in = NULL;
+	strm_cap.next_out = NULL;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+
+	return (deflateEnd_c(strm_cap_c));
+}
+
+int ZEXPORT deflateReset (z_streamp strm)
+{
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+
+	/* XXX: check that these are the only things that deflateReset might need... */
+	strm_cap.next_in = NULL;
+	strm_cap.next_out = NULL;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof strm_cap);
+
+	return (deflateReset_c(strm_cap_c));
+}
+#else /* !SABI_ONLY */
+
 static int			 lzsandbox_initialized;
 static struct    sandbox_class * sbcp;
 static struct    sandbox_object * sbop;
@@ -491,3 +743,4 @@ int ZEXPORT deflateReset (z_streamp strm)
     sizeof(z_stream_cap), CHERI_PERM_LOAD | CHERI_PERM_STORE | CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE_CAP);
   return lzsandbox_invoke(strm, LZOP_DEFLATERESET, &params);
 }
+#endif /* SABI_ONLY */

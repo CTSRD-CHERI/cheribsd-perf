@@ -64,6 +64,17 @@ struct cheri_fd_ret {
  * authority.
  */
 struct stat;
+
+#ifdef SABI_ONLY
+struct cheri_fd_ret	cheri_fd_fstat_c(struct cheri_object fd_object,
+			    struct stat *sb);
+struct cheri_fd_ret	cheri_fd_lseek_c(struct cheri_object fd_object,
+			    off_t offset, int whence);
+struct cheri_fd_ret	cheri_fd_read_c(struct cheri_object fd_object,
+			    void *buf);
+struct cheri_fd_ret	cheri_fd_write_c(struct cheri_object fd_object,
+			    const void *buf);
+#else /* !SABI_ONLY */
 struct cheri_fd_ret	cheri_fd_fstat_c(struct cheri_object fd_object,
 			    __capability struct stat *sb_c);
 struct cheri_fd_ret	cheri_fd_lseek_c(struct cheri_object fd_object,
@@ -72,5 +83,6 @@ struct cheri_fd_ret	cheri_fd_read_c(struct cheri_object fd_object,
 			    __capability void *buf_c);
 struct cheri_fd_ret	cheri_fd_write_c(struct cheri_object fd_object,
 			    __capability const void *buf_c);
+#endif /* SABI_ONLY */
 
 #endif /* !_CHERI_FD_H_ */

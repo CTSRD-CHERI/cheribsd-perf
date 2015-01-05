@@ -31,6 +31,8 @@
 #ifndef _SANDBOX_INTERNAL_H_
 #define	_SANDBOX_INTERNAL_H_
 
+#ifndef SABI_ONLY
+
 #include <sys/stat.h>
 
 #include "cheri_class.h"
@@ -113,5 +115,7 @@ int	sandbox_object_load(struct sandbox_class *sbcp,
 	    struct sandbox_object *sbop);
 void	sandbox_object_unload(struct sandbox_class *sbcp,
 	    struct sandbox_object *sbop);
+
+#endif /* !SABI_ONLY */
 
 #endif /* !_SANDBOX_INTERNAL_H_ */
