@@ -102,6 +102,13 @@ int ef (const char * format, ...)
   return rc;
 }
 
+int ef_c (__capability const char * format, ...)
+{
+  /* XXX: TODO: this */
+  return 0;
+}
+int ef_dc (int x){}
+
 int
 invoke(register_t op,
   __capability void * co_codecap_stderrfd,

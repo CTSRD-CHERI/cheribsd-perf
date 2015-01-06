@@ -92,6 +92,9 @@ extern "C" {
 typedef voidpf (*alloc_func) OF((voidpf opaque, uInt items, uInt size));
 typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
 
+typedef __capability void *(*alloc_func_c) OF((__capability void *opaque, uInt items, uInt size));
+typedef void   (*free_func_c)  OF((__capability void *opaque, __capability void *address));
+
 #if defined(ZLIB_CAP_ONLY) || defined(SB_LIBZ_LIBCHERI)
 void * bufcpy_c_fromcap (void * dst, __capability const void * src, size_t len);
 __capability void * bufcpy_c_tocap (__capability void * dst, const void * src, size_t len);
@@ -104,10 +107,10 @@ struct internal_state;
 #if defined(ZLIB_CAP_ONLY)
 #define MAYBE_DECL_LIBZ_CAP(ptr) \
   ptr
-#else /* ZLIB_CAP_ONLY*/
+#else /* !ZLIB_CAP_ONLY */
 #define MAYBE_DECL_LIBZ_CAP(ptr) \
   __capability ptr
-#endif /* ZLIB_CAP_ONLY*/
+#endif /* ZLIB_CAP_ONLY */
 
 typedef struct z_stream_s_nocap {
     z_const Bytef * next_in;     /* next input byte */
@@ -123,8 +126,8 @@ typedef struct z_stream_s_nocap {
 
     MAYBE_DECL_LIBZ_CAP(struct internal_state FAR * state); /* not visible by applications */
 
-    alloc_func zalloc;  /* used to allocate the internal state */
-    free_func  zfree;   /* used to free the internal state */
+    alloc_func_c zalloc;  /* used to allocate the internal state */
+    free_func_c  zfree;   /* used to free the internal state */
     //voidpf     opaque;  /* private data object passed to zalloc and zfree */
     MAYBE_DECL_LIBZ_CAP(void*     opaque);  /* private data object passed to zalloc and zfree */
 
@@ -148,8 +151,8 @@ typedef struct z_stream_s_cap {
 
     MAYBE_DECL_LIBZ_CAP(struct internal_state FAR * state); /* not visible by applications */
 
-    alloc_func zalloc;  /* used to allocate the internal state */
-    free_func  zfree;   /* used to free the internal state */
+    alloc_func_c zalloc;  /* used to allocate the internal state */
+    free_func_c  zfree;   /* used to free the internal state */
     //MAYBE_DECL_LIBZ_CAP(voidpf     opaque);  /* private data object passed to zalloc and zfree */
     MAYBE_DECL_LIBZ_CAP(void*     opaque);  /* private data object passed to zalloc and zfree */
 

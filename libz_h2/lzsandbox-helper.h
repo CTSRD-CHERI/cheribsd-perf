@@ -41,4 +41,7 @@ struct lzparams
 
 int ef (const char * format, ...);
 
+int ef_c (__capability const char * format, ...);
+
+int ef_dc (int x);
 #endif /* !_LZSANDBOX_HELPER_H_ */

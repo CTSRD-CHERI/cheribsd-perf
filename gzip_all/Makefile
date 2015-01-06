@@ -215,7 +215,7 @@ clean-progs:
 		rm -f *.o *.E gzip gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hj1 gzip_u_libz_sabi1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin bin.tar
 		rm -rf results
 
-push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h1 push-gzip_u_libz_hj1 push-gzip_u_libz_sabi1 push-gzip_u_libz_hm push-gzip_u_libz_am push-gzip_u_libz_a1 push-gzip_u_libz_c push-gzip_a_libz_c push-test
+push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h1 push-gzip_u_libz_hj1 push-gzip_u_libz_sabi1 push-gzip_u_libz_hm push-gzip_u_libz_am push-gzip_u_libz_a1 push-test
 
 push-gzip_u:
 		$(CHERI_PUSH) gzip_u $(CHERI_PUSH_DIR)/gzip_u
@@ -284,7 +284,7 @@ pull-local-results:
 tar:
 		cp ../libz_h2/lzsandbox-helper_u.bin .
 		cp ../libz_h2/lzsandbox-helper_j.bin .
-		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin lzsandbox-helper_u.bin lzsandbox-helper_j.bin test.sh
+		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzsandbox-helper_h gzsandbox-helper_h.bin lzsandbox-helper_u.bin lzsandbox-helper_j.bin test.sh
 		rm lzsandbox-helper_u.bin
 
 push-tar:
