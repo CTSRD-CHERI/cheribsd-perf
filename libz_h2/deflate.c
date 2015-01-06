@@ -1070,13 +1070,10 @@ int ZEXPORT deflateEnd_c (strm)
         status != FINISH_STATE) {
       return Z_STREAM_ERROR;
     }
-ef_c("here\n");
 
     /* Deallocate in reverse order of allocations: */
     TRY_FREE(strm, strm->state->pending_buf);
-ef_c("here2\n");
     TRY_FREE(strm, strm->state->head);
-ef_c("here3\n");
     TRY_FREE(strm, strm->state->prev);
     TRY_FREE(strm, strm->state->window);
 
