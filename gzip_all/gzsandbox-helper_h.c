@@ -66,13 +66,15 @@ static	void	maybe_warnx(const char *fmt, ...) __printflike(1, 2);
 
 int
 invoke(register_t op,
+  __capability void * c1,
+  __capability void * c2,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams
 #ifdef SB_COLLECT_STATS
   ,__capability int * param_num_ccalls
 #endif /* SB_COLLECT_STATS */
-);
+) __attribute__((cheri_ccall));
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
@@ -167,6 +169,8 @@ size_t strlen_c (__capability const char * str)
 
 int
 invoke(register_t op,
+  __capability void * c1,
+  __capability void * c2,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams
@@ -175,10 +179,10 @@ invoke(register_t op,
 #endif /* SB_COLLECT_STATS */
 )
 {
-  __asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
+  //__asm__ __volatile__ ("cmove $c11, $c26" ::: "memory");
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Winline-asm"
-  __asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
+  //__asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
 #pragma clang diagnostic pop
   static int initialized = 0;
   /* reconstruct the cheri_objects */

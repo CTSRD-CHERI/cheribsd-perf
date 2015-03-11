@@ -1,10 +1,10 @@
-CHERIBSD?=/home/mbv21/trunk/tools/cheribsd
-CHERI_SDK?=/home/mbv21/trunk/tools/sdk
+OBJDIR?=/home/mbv21/obj/mips.mips64/usr/home/mbv21
+CHERIBSD?=/home/mbv21/cheribsd
+CHERI_SDK?=/home/mbv21/ctsrd/cherilibs/trunk/tools/sdk
 CHERI_SYSROOT:=$(CHERI_SDK)/sysroot
 CHERI_SDK_BIN:=$(CHERI_SDK)/bin
-#CHERI_SANDBOX_LD:=$(CHERI_SYSROOT)/usr/libdata/ldscripts/sandbox.ld
-CHERI_SANDBOX_LD:=${.CURDIR}/../libc_cheri_u/sandbox_u.ld
-CHERI_SANDBOX_LD_J:=${.CURDIR}/../libc_cheri_u/sandbox_j.ld
+CHERI_SANDBOX_LD:=$(CHERIBSD)/lib/libc_cheri/sandbox.ld
+CHERI_SANDBOX_LD_J:=$(CHERI_SANDBOX_LD)
 CFLAGS=
 CFLAGS+=-O2
 
@@ -20,10 +20,9 @@ CPOSTFLAGS+=-target cheri-unknown-freebsd -msoft-float -B$(CHERI_SDK)
 
 # CHERI_PUSH is intended to be used in the form
 # $(CHERI_PUSH) local_file $(CHERI_PUSH_DIR)/remote_file
-CHERI_PUSH=n localhost 8888
-CHERI_PULL=n -1 8898
+CHERI_PUSH=scp
 
-CHERI_PUSH_DIR=/home/mbv21/tmp
+CHERI_PUSH_DIR=marjoram:/big/world/tmp2
 
 #CHERI_PUSH=scp -i ~/.ssh/mbv21
 #CHERI_PUSH_DIR=mbv21@cherrybox.sec.cl.cam.ac.uk:~/tmp

@@ -31,7 +31,7 @@ static struct    sandbox_object * sbop;
 #include <cheri/cheri_fd.h>
 #include <cheri/sandbox.h>
 
-#define GZIP_SANDBOX_BIN "gzsandbox-helper_h.bin"
+#define GZIP_SANDBOX_BIN "gzsandbox-helper_h"
 
 static void
 gzsandbox_initialize(void);
@@ -39,6 +39,7 @@ gzsandbox_initialize(void);
 static void
 gzsandbox_initialize(void)
 {
+  int rc;
   struct cheri_object stderrfd;
   struct gz_init_params params;
 
@@ -70,8 +71,8 @@ gzsandbox_initialize(void)
   num_ccalls++;
 #endif /* SB_COLLECT_STATS */
   
-  if (sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
-            0, 0, 0, 0, 0, 0, 0,
+  rc = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
+            0, 0, 0, 0, 0, 0, 0, 0,
             stderrfd.co_codecap, stderrfd.co_datacap,
             cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD),
 #ifdef SB_COLLECT_STATS
@@ -80,8 +81,9 @@ gzsandbox_initialize(void)
             cheri_zerocap(),
 #endif /* SB_COLLECT_STATS */
             cheri_zerocap(), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap()))
-    err(-1, "sandbox_object_cinvoke");
+            cheri_zerocap(), cheri_zerocap());
+    if (rc != 0)
+      err(-1, "sandbox_object_cinvoke");
 }
 
 off_t
@@ -101,6 +103,7 @@ off_t
 gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
     uint32_t mtime)
 {
+  int rc;
   gzsandbox_initialize();
   struct gz_params params;
   memset(&params, 0, sizeof params);
@@ -114,11 +117,14 @@ gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
 #ifdef SB_COLLECT_STATS
   num_ccalls++;
 #endif /* SB_COLLECT_STATS */
-  return sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
-            0, 0, 0, 0, 0, 0, 0,
+  rc = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
+            0, 0, 0, 0, 0, 0, 0, 0,
             cheri_zerocap(), cheri_zerocap(),
             cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
+
+  printf("rc from cinvoke: %d\n", rc);
+  return (rc);
 }
 

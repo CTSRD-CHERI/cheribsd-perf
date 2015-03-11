@@ -30,8 +30,8 @@ GZIP_A_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
 
 GZIP_U_LDADD=../libz_all/libz_u.a
 GZIP_A_LDADD=../libz_all/libz_u.a ../libsep/libsep.a
-GZIP_H_LDADD=../libcheri_u/libcheri_u.a
-GZIP_H_HELPER_LDADD=../libz_all/libz_u.a ../libc_cheri_u/libc_cheri_u.a
+GZIP_H_LDADD=$(OBJDIR)/cheribsd/lib/libcheri/libcheri.a
+GZIP_H_HELPER_LDADD=../libz_all/libz_u.a $(OBJDIR)/cheribsd/lib/libc_cheri/libc_cheri.a
 GZIP_U_LIBZ_H1_LDADD=../libz_h2/libzwrapper1.a
 GZIP_U_LIBZ_HM_LDADD=../libz_h2/libzwrapperm.a
 GZIP_U_LIBZ_A1_LDADD=../libz_all/libz_a1.a
@@ -52,10 +52,10 @@ progs: gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_
 
 everything: clean all push
 
-dep: libsep csu_u libz_u libz_a libcheri_u libc_cheri_u libz_h2 libz_c
+dep: libsep csu_u libz_u libz_a libz_h2 libz_c
 		echo done
 
-clean-dep: clean-libsep clean-csu_u clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c clean-libcheri_u clean-libc_cheri_u
+clean-dep: clean-libsep clean-csu_u clean-libz_u clean-libz_a clean-libz_h2 clean-libz_c
 		echo done
 
 csu_u:
@@ -109,23 +109,6 @@ libsep:
 clean-libsep:
 		cd ../libsep && \
 		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
-
-libcheri_u:
-		cd ../libcheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
-
-clean-libcheri_u:
-		cd ../libcheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
-
-libc_cheri_u:
-		cd ../libc_cheri_u && \
-		touch cheri_invoke.So && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
-
-clean-libc_cheri_u:
-		cd ../libc_cheri_u && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o
@@ -182,7 +165,7 @@ gzip_u: gzip_u.o libz_u
 gzip_a: gzip_a.o gzsandbox_a.o libz_u libsep
 		$(CC) $(CFLAGS) -o gzip_a gzip_a.o gzsandbox_a.o $(GZIP_A_LDADD)
 
-gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o libz_u libcheri_u libc_cheri_u
+gzip_h: gzip_h.o gzsandbox_h.o gzsandbox-helper_h.o libz_u
 		$(CC) $(CFLAGS) -o gzip_h gzip_h.o gzsandbox_h.o $(GZIP_H_LDADD)
 		$(CC) $(CFLAGS) -Wl,--script=$(CHERI_SANDBOX_LD) -Wl,-L../csu_u/cheri -nostdlib -o gzsandbox-helper_h gzsandbox-helper_h.o $(GZIP_H_HELPER_LDADD)
 		$(OBJCOPY) -S -O binary gzsandbox-helper_h gzsandbox-helper_h.bin
@@ -225,22 +208,22 @@ push-gzip_a:
 
 push-gzip_h:
 		$(CHERI_PUSH) gzip_h $(CHERI_PUSH_DIR)/gzip_h
-		$(CHERI_PUSH) gzsandbox-helper_h.bin $(CHERI_PUSH_DIR)/gzsandbox-helper_h.bin
+		$(CHERI_PUSH) gzsandbox-helper_h $(CHERI_PUSH_DIR)/gzsandbox-helper_h
 
 push-gzip_u_libz_h1:
 		$(CHERI_PUSH) gzip_u_libz_h1 $(CHERI_PUSH_DIR)/gzip_u_libz_h1
-		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_u.bin $(CHERI_PUSH_DIR)/lzsandbox-helper_u.bin
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_u $(CHERI_PUSH_DIR)/lzsandbox-helper_u
 
 push-gzip_u_libz_hj1:
 		$(CHERI_PUSH) gzip_u_libz_hj1 $(CHERI_PUSH_DIR)/gzip_u_libz_hj1
-		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_j.bin $(CHERI_PUSH_DIR)/lzsandbox-helper_j.bin
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_j $(CHERI_PUSH_DIR)/lzsandbox-helper_j
 
 push-gzip_u_libz_sabi1:
 		$(CHERI_PUSH) gzip_u_libz_sabi1 $(CHERI_PUSH_DIR)/gzip_u_libz_sabi1
 
 push-gzip_u_libz_hm:
 		$(CHERI_PUSH) gzip_u_libz_hm $(CHERI_PUSH_DIR)/gzip_u_libz_hm
-		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_u.bin $(CHERI_PUSH_DIR)/lzsandbox-helper_u.bin
+		$(CHERI_PUSH) ../libz_h2/lzsandbox-helper_u $(CHERI_PUSH_DIR)/lzsandbox-helper_u
 
 push-gzip_u_libz_a1:
 		$(CHERI_PUSH) gzip_u_libz_a1 $(CHERI_PUSH_DIR)/gzip_u_libz_a1
@@ -282,10 +265,10 @@ pull-local-results:
 		tar cf $(RESULTS_DIR).p.tar $(RESULTS_DIR)
 
 tar:
-		cp ../libz_h2/lzsandbox-helper_u.bin .
-		cp ../libz_h2/lzsandbox-helper_j.bin .
-		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzsandbox-helper_h gzsandbox-helper_h.bin lzsandbox-helper_u.bin lzsandbox-helper_j.bin test.sh
-		rm lzsandbox-helper_u.bin
+		cp ../libz_h2/lzsandbox-helper_u .
+		cp ../libz_h2/lzsandbox-helper_j .
+		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzsandbox-helper_h gzsandbox-helper_h lzsandbox-helper_u lzsandbox-helper_j test.sh
+		rm lzsandbox-helper_u
 
 push-tar:
 		$(CHERI_PUSH) bin.tar $(CHERI_PUSH_DIR)/bin.tar

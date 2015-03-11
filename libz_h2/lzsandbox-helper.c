@@ -23,9 +23,11 @@ static struct cheri_object stderrfd;
 
 int
 invoke(register_t op,
+  __capability void * c1,
+  __capability void * c2,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
-  __capability void * vparams);
+  __capability void * vparams) __attribute__((cheri_ccall));
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
@@ -111,6 +113,8 @@ int ef_dc (int x){}
 
 int
 invoke(register_t op,
+  __capability void * c1,
+  __capability void * c2,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams)
@@ -158,5 +162,7 @@ invoke(register_t op,
     return -2;
   }
 
+  (void)c1;
+  (void)c2;
   return 0;
 }

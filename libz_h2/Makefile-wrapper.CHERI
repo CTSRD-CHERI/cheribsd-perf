@@ -19,11 +19,11 @@ zwrapper1sabi.o: zwrapper.c
 all: zwrapper1.o zwrapper1j.o zwrapperm.o zwrapper1sabi.o
 	mkdir -p tmpdir_u
 	cd tmpdir_u && \
-	$(AR) -x ../../libcheri_u/libcheri_u.a && \
+	$(AR) -x $(OBJDIR)/cheribsd/lib/libcheri/libcheri.a && \
 	cd ..
 	mkdir -p tmpdir_j
 	cd tmpdir_j && \
-	$(AR) -x ../../libcheri_u/libcheri_j.a && \
+	$(AR) -x $(OBJDIR)/cheribsd/lib/libcheri/libcheri.a && \
 	cd ..
 	mkdir -p tmpdir_sabi
 	cd tmpdir_sabi && \
@@ -36,5 +36,5 @@ all: zwrapper1.o zwrapper1j.o zwrapperm.o zwrapper1sabi.o
 
 clean:
 	rm -f *.a *.so *.o *.so.1
-	rm -rf tmpdir_u tmpdir_j
+	rm -rf tmpdir_u tmpdir_j tmpdir_sabi
 

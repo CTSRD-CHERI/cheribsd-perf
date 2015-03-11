@@ -387,9 +387,9 @@ static struct sandbox_object	*sbop;
 struct cheri_object		 stderrfd;
 
 #ifdef NO_CCALL
-#define LZ_SANDBOX_BIN "lzsandbox-helper_j.bin"
+#define LZ_SANDBOX_BIN "lzsandbox-helper_j"
 #else
-#define LZ_SANDBOX_BIN "lzsandbox-helper_u.bin"
+#define LZ_SANDBOX_BIN "lzsandbox-helper_u"
 #endif
 #define LZ_SANDBOX_HEAP_SIZE (4 * 1048576)
 
@@ -469,7 +469,7 @@ lzsandbox_invoke(z_streamp strm, int opno, struct lzparams *params)
 #endif /* SB_COLLECT_STATS */
   
 	return (sandbox_object_cinvoke(local_sbop, opno, 
-	    0, 0, 0, 0, 0, 0, 0,
+	    0, 0, 0, 0, 0, 0, 0, 0,
 	    stderrfd.co_codecap, stderrfd.co_datacap,
 	    cheri_ptrperm(params, sizeof(struct lzparams),
 		CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP),
