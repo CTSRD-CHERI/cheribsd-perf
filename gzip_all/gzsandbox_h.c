@@ -124,7 +124,6 @@ gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
             cheri_zerocap(), cheri_zerocap(),
             cheri_zerocap(), cheri_zerocap());
 
-  printf("rc from cinvoke: %d\n", rc);
   return (rc);
 }
 

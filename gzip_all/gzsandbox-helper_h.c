@@ -183,6 +183,7 @@ invoke(register_t op,
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Winline-asm"
   //__asm__ __volatile__ ("cmove $c0, $c26" ::: "memory");
+  __asm__ __volatile__ ("cmove $c0, $c11" ::: "memory");
 #pragma clang diagnostic pop
   static int initialized = 0;
   /* reconstruct the cheri_objects */
@@ -358,7 +359,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 		goto out;
 	}
 
-	crc = crc32(0L, Z_NULL, 0);
+	crc = crc32_c(0L, Z_NULL, 0);
 	for (;;) {
 		if (z.avail_out == 0) {
 			if (write_c(out, (void*)outbufp, BUFLEN) != BUFLEN) {
@@ -382,7 +383,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 			if (in_size == 0)
 				break;
 
-			crc = crc32(crc, (const Bytef *)inbufp, (unsigned)in_size);
+			crc = crc32_c(crc, (const Bytef *)inbufp, (unsigned)in_size);
 			in_tot += in_size;
 			z.next_in = (unsigned char *)inbufp;
 			z.avail_in = in_size;
@@ -424,7 +425,7 @@ gz_compress(struct cheri_object in, struct cheri_object out, __capability off_t 
 			break;
 	}
 
-	if (deflateEnd(&z) != Z_OK) {
+	if (deflateEnd_c(&z) != Z_OK) {
 		maybe_warnx("deflateEnd failed");
 		in_tot = -1;
 		goto out;
@@ -580,7 +581,7 @@ gz_uncompress(struct cheri_object in, struct cheri_object out, __capability char
 			ADVANCE();
 			state++;
 			out_sub_tot = 0;
-			crc = crc32(0L, Z_NULL, 0);
+			crc = crc32_c(0L, Z_NULL, 0);
 			break;
 
 		case GZSTATE_MAGIC1:
@@ -717,7 +718,7 @@ gz_uncompress(struct cheri_object in, struct cheri_object out, __capability char
 			wr = BUFLEN - z.avail_out;
 
 			if (wr != 0) {
-				crc = crc32(crc, (const Bytef *)outbufp, (unsigned)wr);
+				crc = crc32_c(crc, (const Bytef *)outbufp, (unsigned)wr);
 				if (
 #ifndef SMALL
 				    /* don't write anything with -t */
@@ -733,7 +734,7 @@ gz_uncompress(struct cheri_object in, struct cheri_object out, __capability char
 			}
 
 			if (error == Z_STREAM_END) {
-				inflateEnd(&z);
+				inflateEnd_c(&z);
 				state++;
 			}
 
@@ -813,7 +814,7 @@ stop:
 		break;
 	}
 	if (state > GZSTATE_INIT)
-		inflateEnd(&z);
+		inflateEnd_c(&z);
 
 	free(inbufp);
 out1:

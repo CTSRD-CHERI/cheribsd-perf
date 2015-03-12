@@ -12,7 +12,7 @@ CFLAGS+=-DDYNAMIC_BUFLEN
 
 GZIP_U_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"u\" -I../libz_all/
 GZIP_A_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_CAPSICUM -I../libsep/ -I../libz_all/
-GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI -I../libz_all/
+GZIP_H_CFLAGS=-DSB_GZIP_TYPE=\"h\" -DSB_LIBZ_TYPE=\"u\" -DSB_GZIP_LIBCHERI -I../libz_h2/
 GZIP_U_LIBZ_H1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"h1\" -I../libz_h2/
 GZIP_U_LIBZ_HM_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"hm\" -I../libz_h2/
 GZIP_U_LIBZ_A1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"a1\" -I../libz_all/
@@ -26,12 +26,13 @@ GZIP_U_LIBZ_SABI1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"sabi1\" -I../libz
 GZIP_U_LIBZ_A1_CFLAGS+=-DSB_LIBZ_CAPSICUM -DLZ_SINGLE_SANDBOX
 GZIP_U_LIBZ_AM_CFLAGS+=-DSB_LIBZ_CAPSICUM
 GZIP_U_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
+GZIP_H_CFLAGS+=-DZLIB_CAP_ONLY
 GZIP_A_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
 
 GZIP_U_LDADD=../libz_all/libz_u.a
 GZIP_A_LDADD=../libz_all/libz_u.a ../libsep/libsep.a
 GZIP_H_LDADD=$(OBJDIR)/cheribsd/lib/libcheri/libcheri.a
-GZIP_H_HELPER_LDADD=../libz_all/libz_u.a $(OBJDIR)/cheribsd/lib/libc_cheri/libc_cheri.a
+GZIP_H_HELPER_LDADD=../libz_h2/libz_c.a $(OBJDIR)/cheribsd/lib/libc_cheri/libc_cheri.a
 GZIP_U_LIBZ_H1_LDADD=../libz_h2/libzwrapper1.a
 GZIP_U_LIBZ_HM_LDADD=../libz_h2/libzwrapperm.a
 GZIP_U_LIBZ_A1_LDADD=../libz_all/libz_a1.a
@@ -154,7 +155,7 @@ gzsandbox_h.o:
 		$(CC) $(CFLAGS) $(GZIP_H_CFLAGS) -c gzsandbox_h.c -o gzsandbox_h.o
 
 gzsandbox-helper_h.o:
-		$(CC) $(CFLAGS) $(GZIP_H_CFLAGS) -c gzsandbox-helper_h.c -o gzsandbox-helper_h.o
+		$(CC) $(CFLAGS) -mabi=sandbox $(GZIP_H_CFLAGS) -c gzsandbox-helper_h.c -o gzsandbox-helper_h.o
 
 gzsandbox_a_libz_c.o:
 		$(CC) $(CFLAGS) $(GZIP_A_LIBZ_C_CFLAGS) -c gzsandbox_a.c -o gzsandbox_a_libz_c.o
