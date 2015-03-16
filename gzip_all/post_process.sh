@@ -15,6 +15,15 @@ extract_avg ()
     avg_value=`tail -n 1 $stat_file | awk '{print $avg_field;}' avg_field=$avg_field`
     stdev_field=7
     stdev_value=`tail -n 1 $stat_file | awk '{print $stdev_field;}' stdev_field=$stdev_field`
+
+    # percentage diff:
+    avg_perdiff_value=`tail -n 2 $stat_file-diff | head -n 1 | awk '{print $1;}' | sed s/\%//g`
+    stdev_perdiff_value=`tail -n 2 $stat_file-diff | head -n 1 | awk '{print $3;}' | sed s/\%//g`
+    if [ -z $avg_perdiff_value ]
+    then
+      avg_perdiff_value="0"
+      stdev_perdiff_value="0"
+    fi
   fi
 }
 
@@ -28,6 +37,10 @@ run_ministat ()
     #cat tmp | awk '{if (x) print $0; else x=1;}' > tmp2
     #mv tmp2 tmp
     cat tmp | ministat -n > $stat_file
+
+    # combine with prev
+    Mprev=results$CASE-$prefix-$prev_impl-$x_outer
+    ministat M$Mprev M$file > $stat_file-diff
   fi
 }
 
@@ -38,10 +51,13 @@ extract_stats ()
   # find average time taken
   stat_file=stat$CASE-${filep}_time
   cat $file | sed "s/^\[stat\].*$//g" | sed "/^$/d" > tmp
+  cp tmp M$file
   run_ministat
   extract_avg
   avg_time=$avg_value
   stdev_time=$stdev_value
+  avg_perdiff_time=$avg_perdiff_value
+  stdev_perdiff_time=$stdev_perdiff_value
 
   # find average number of ccalls
   stat_file=stat$CASE-${filep}_ccalls
@@ -85,7 +101,12 @@ process_file ()
 {
   # filename is of the form results<case>-<prefix>-<implementation>-<outer loop variable>-<inner loop variable>
   # any of these might also usefully be an x_var
-  impl=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $2}'`
+  cur_impl=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $2}'`
+  if [ $cur_impl != $impl ]
+  then
+    prev_impl=$impl
+  fi
+  impl=$cur_impl
   x_outer=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $3}'`
   x_inner=`echo $file | sed s/^results$CASE-$prefix-/results$CASE-/g | awk -F"-" '{print $4}'`
   filep=`echo $file | sed s/^results$CASE-//g`
@@ -166,7 +187,7 @@ display_graph ()
 
 process_files ()
 {
-  FILES=`ls -1 | grep "results$CASE-$prefix-[^-]*$filter_outer$filter_inner"`
+  FILES=`ls -1 | grep "^results$CASE-$prefix-[^-]*$filter_outer$filter_inner"`
   NFILES=`echo $FILES | wc -w | tr -d " "`
   for file in $FILES
   do
@@ -177,7 +198,7 @@ process_files ()
 
 clean ()
 {
-  rm -f results*-* data*-* stat*-* *.plot *.png *.tex
+  rm -f results*-* data*-* stat*-* *.plot *.png *.tex M*
 }
 
 # Call this with the following variables set appropriately:
@@ -191,6 +212,7 @@ clean ()
 # title: graph title
 process_test ()
 {
+  prev_impl="none"
   process_files
 if [ $NFILES -ne 0 ]
 then
@@ -265,6 +287,17 @@ process_tests ()
   x_var=x_outer
   xlabel="bytes total"
   ylabel="total time (seconds)"
+  title="CASE $CASE: CCall vs CJALR: vary file size"
+#  process_test
+  
+  CASE=5
+  filter_inner=
+  filter_outer=
+  prefix=compress_time_test
+  y_var=avg_perdiff_time
+  x_var=x_outer
+  xlabel="bytes total"
+  ylabel="percentage difference (%)"
   title="CASE $CASE: CCall vs CJALR: vary file size"
   process_test
   
