@@ -242,6 +242,14 @@ int ZEXPORT deflate (z_streamp strm, int flush)
 {
   return deflate_c(strm, flush);
 }
+int ZEXPORT deflateEnd (z_streamp strm)
+{
+  return deflateEnd_c(strm);
+}
+int ZEXPORT deflateReset (z_streamp strm)
+{
+  return deflateReset_c(strm);
+}
 #endif /* ZLIB_CAP_ONLY */
 
 #if defined(ZLIB_CAP_ONLY)

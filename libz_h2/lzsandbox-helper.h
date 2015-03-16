@@ -12,6 +12,7 @@
 #define LZOP_INFLATE      5
 #define LZOP_INFLATEEND   6
 #define LZOP_DEFLATERESET 7
+#define LZOP_INFLATERESET 8
 
 #include <machine/cheri.h>
 #include <machine/cheric.h>

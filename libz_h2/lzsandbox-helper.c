@@ -151,6 +151,8 @@ invoke(register_t op,
     return inflate_c(params->strm, params->flush);
   else if (op == LZOP_INFLATEEND)
     return inflateEnd_c(params->strm);
+  else if (op == LZOP_INFLATERESET)
+    return inflateReset_c(params->strm);
   else if (op == LZOP_CRC32)
   {
     *params->crc_result = crc32_c(params->crc, params->buf, params->len);

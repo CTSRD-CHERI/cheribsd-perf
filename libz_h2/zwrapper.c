@@ -251,6 +251,7 @@ deflateInit2_(z_streamp strm, int level, int method,
 	return (rc);
 }
 
+#if 0
 int ZEXPORT
 inflateInit_(z_streamp strm, const char *version, int stream_size)
 {
@@ -260,6 +261,7 @@ inflateInit_(z_streamp strm, const char *version, int stream_size)
 
   return (inflateInit2_(strm, DEF_WBITS, version, stream_size));
 }
+#endif
 
 int ZEXPORT
 inflateInit2_(z_streamp strm, int  windowBits,
@@ -377,6 +379,28 @@ deflateReset(z_streamp strm)
 	strm_cap_c = cheri_ptr(&strm_cap, sizeof(strm_cap));
 
 	return (deflateReset_c(strm_cap_c));
+}
+
+int ZEXPORT
+inflateReset(z_streamp strm)
+{
+	z_stream_cap strm_cap;
+	__capability z_stream_cap *strm_cap_c;
+
+	/*
+	 * TODO: Check that these are the only things that
+	 * inflateReset might need.
+	 */
+	strm_cap.next_in = NULL;
+	strm_cap.next_out = NULL;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+	strm_cap_c = cheri_ptr(&strm_cap, sizeof(strm_cap));
+
+	return (inflateReset_c(strm_cap_c));
 }
 #else /* !SABI_ONLY */
 
@@ -913,5 +937,38 @@ deflateReset(z_streamp strm)
 	    CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE_CAP);
 
 	return (lzsandbox_invoke(strm, LZOP_DEFLATERESET, &params));
+}
+
+int ZEXPORT
+inflateReset(z_streamp strm)
+{
+	struct lzparams params;
+	z_stream_cap strm_cap;
+
+	memset(&params, 0, sizeof(params));
+	memset(&strm_cap, 0, sizeof(strm_cap));
+
+	/*
+	 * TODO: Check that these are the only things that
+	 * inflateReset might need.
+	 */
+	strm_cap.next_in = NULL;
+	strm_cap.next_out = NULL;
+	strm_cap.avail_in = strm->avail_in;
+	strm_cap.avail_out = strm->avail_out;
+	strm_cap.total_in = strm->total_in;
+	strm_cap.total_out = strm->total_out;
+	strm_cap.state = strm->state;
+	strm_cap.zalloc = strm->zalloc;
+	strm_cap.zfree = strm->zfree;
+	strm_cap.opaque = strm->opaque;
+	strm_cap.data_type = strm->data_type;
+	strm_cap.adler = strm->adler;
+	strm_cap.reserved = strm->reserved;
+	params.strm = cheri_ptrperm(&strm_cap, sizeof(z_stream_cap),
+	    CHERI_PERM_LOAD | CHERI_PERM_STORE |
+	    CHERI_PERM_LOAD_CAP | CHERI_PERM_STORE_CAP);
+
+	return (lzsandbox_invoke(strm, LZOP_INFLATERESET, &params));
 }
 #endif /* SABI_ONLY */

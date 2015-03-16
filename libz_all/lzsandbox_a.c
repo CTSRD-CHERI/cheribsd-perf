@@ -57,13 +57,13 @@ lzsandbox_initialize(z_streamp strm)
 }
 
 struct host_lz_deflate_req {
-  z_stream hzc_req_strm;
-  int hzc_req_flush;
+	z_stream hzc_req_strm;
+	int hzc_req_flush;
 } __packed;
 
 struct host_lz_deflate_rep {
-  z_stream hzc_rep_strm;
-  int hzc_rep_retval;
+	z_stream hzc_rep_strm;
+	int hzc_rep_retval;
 } __packed;
 
 static int 
@@ -72,34 +72,41 @@ lz_deflate_insandbox(z_streamp strm, int flush)
 	struct host_lz_deflate_req req;
 	struct host_lz_deflate_rep rep;
 	struct iovec iov_req[2], iov_rep[2];
-	size_t len;
+	int iovcount = 0;
+	size_t len, repsz;
 
 	bzero(&req, sizeof(req));
   memcpy(&req.hzc_req_strm, strm, sizeof(z_stream));
   req.hzc_req_flush = flush;
 	iov_req[0].iov_base = &req;
 	iov_req[0].iov_len = sizeof(req);
-	iov_req[1].iov_base = strm->next_in;
-	iov_req[1].iov_len = strm->avail_in;
 	iov_rep[0].iov_base = &rep;
 	iov_rep[0].iov_len = sizeof(rep);
+	iovcount++;
+	repsz += sizeof(rep);
+#ifndef GZ_SHMEM
+	iov_req[1].iov_base = strm->next_in;
+	iov_req[1].iov_len = strm->avail_in;
 	iov_rep[1].iov_base = strm->next_out;
 	iov_rep[1].iov_len = strm->avail_out;
+	iovcount++;
+	repsz += strm->avail_out;
+#endif
   struct host_rpc_params params;
   params.scb = local_lcsp;
   params.opno = PROXIED_LZ_DEFLATE;
   params.req = iov_req;
-  params.reqcount = 2;
+  params.reqcount = iovcount;
   params.req_fdp = NULL;
   params.req_fdcount = 0;
   params.rep = iov_rep;
-  params.repcount = 2;
+  params.repcount = iovcount;
   params.replenp = &len;
   params.rep_fdp = NULL;
   params.rep_fdcountp = NULL;
 	if (lch_rpc_fix(&params) < 0)
 		err(-1, "lch_rpc");
-	if (len != sizeof(rep)+strm->avail_out)
+	if (len != repsz)
 		errx(-1, "lch_rpc len %zu", len);
 
   /* XXX: TODO: a check on strm to make sure sandbox hasn't caused buffer overflow */
@@ -117,18 +124,22 @@ sandbox_lz_deflate_buffer(struct lc_host *lchp, uint32_t opno,
 	struct host_lz_deflate_rep rep;
   Bytef * next_in = (Bytef *) buffer + sizeof(req);
 	struct iovec iov[2];
+	int iovcount = 0;
 
 	if (len < sizeof(req))
 		err(-1, "sandbox_lz_deflate_buffer: len %zu", len);
 
 	bcopy(buffer, &req, sizeof(req));
 	
-  if (len != sizeof(req)+req.hzc_req_strm.avail_in)
+  if (len != sizeof(req) + req.hzc_req_strm.avail_in)
 		err(-1, "sandbox_lz_deflate_buffer: len %zu", len);
 
+  size_t avail_out = req.hzc_req_strm.avail_out;
+#ifdef GZ_SHMEM
+  Bytef * next_out = req.hzc_req_strm.next_out;
+#else /* !GZ_SHMEM */
   /* XXX: expensive! (Maybe do this once if possible?) */
   /* allocate output buffer for deflate() */
-  size_t avail_out = req.hzc_req_strm.avail_out;
   Bytef * next_out = malloc(avail_out);
   if (!next_out)
 		err(-1, "malloc: %zu", avail_out);
@@ -147,20 +158,30 @@ sandbox_lz_deflate_buffer(struct lc_host *lchp, uint32_t opno,
   req.hzc_req_strm.next_in = next_in;
   req.hzc_req_strm.next_out = next_out;
 
+#endif /* GZ_SHMEM */
+
 	bzero(&rep, sizeof(rep));
 	rep.hzc_rep_retval = zlib_deflate(&req.hzc_req_strm, req.hzc_req_flush);
 	iov[0].iov_base = &rep;
 	iov[0].iov_len = sizeof(rep);
+	iovcount++;
+	
+#ifndef GZ_SHMEM
 	iov[1].iov_base = next_out;
 	iov[1].iov_len = avail_out;
+	iovcount++;
+#endif /* !GZ_SHMEM */
 
   memcpy(&rep.hzc_rep_strm, &req.hzc_req_strm, sizeof(z_stream));
+
+#ifndef GZ_SHMEM
   /* fix up the pointers */
   rep.hzc_rep_strm.next_in = host_next_in + (req.hzc_req_strm.next_in - next_in);
   rep.hzc_rep_strm.next_out = host_next_out + (req.hzc_req_strm.next_out - next_out);
+#endif /* !GZ_SHMEM */
 
 
-	if (lcs_sendrpc(lchp, opno, seqno, iov, 2) < 0)
+	if (lcs_sendrpc(lchp, opno, seqno, iov, iovcount) < 0)
   {
     free(next_out);
 		err(-1, "lcs_sendrpc");

@@ -131,7 +131,7 @@ z_streamp strm;
     return Z_OK;
 }
 
-int ZEXPORT inflateReset(strm)
+int ZEXPORT inflateReset_c(strm)
 z_streamp strm;
 {
     struct inflate_state FAR *state;
@@ -179,7 +179,7 @@ int windowBits;
     /* update state and reset the rest of it */
     state->wrap = wrap;
     state->wbits = (unsigned)windowBits;
-    return inflateReset(strm);
+    return inflateReset_c(strm);
 }
 
 ZEXTERN int ZEXPORT inflateInit2_c OF((z_streamp strm, __capability void * vparams));
@@ -226,7 +226,7 @@ int ZEXPORT inflateInit2_c (z_streamp strm, __capability void * vparams)
     return ret;
 }
 
-/*int ZEXPORT inflateInit_(strm, version, stream_size)
+int ZEXPORT inflateInit_(strm, version, stream_size)
 z_streamp strm;
 const char *version;
 int stream_size;
@@ -237,7 +237,7 @@ int stream_size;
     params.version = version ? cheri_ptr((void*)version, strlen(version)+1) : version;
     params.stream_size = stream_size;
     return inflateInit2_c(strm, cheri_ptr(&params, sizeof params));
-}*/
+}
 
 int ZEXPORT inflatePrime(strm, bits, value)
 z_streamp strm;
@@ -630,6 +630,14 @@ int ZEXPORT inflateInit2_ (z_streamp strm,
 int ZEXPORT inflate (z_streamp strm, int flush)
 {
   return inflate_c(strm, flush);
+}
+int ZEXPORT inflateEnd (z_streamp strm)
+{
+  return inflateEnd_c(strm);
+}
+int ZEXPORT inflateReset (z_streamp strm)
+{
+  return inflateReset_c(strm);
 }
 #endif /* ZLIB_CAP_ONLY */
 
@@ -1452,7 +1460,7 @@ z_streamp strm;
     /* return no joy or set up to restart inflate() on a new block */
     if (state->have != 4) return Z_DATA_ERROR;
     in = strm->total_in;  out = strm->total_out;
-    inflateReset(strm);
+    inflateReset_c(strm);
     strm->total_in = in;  strm->total_out = out;
     state->mode = TYPE;
     return Z_OK;

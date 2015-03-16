@@ -45,6 +45,9 @@ __FBSDID("$FreeBSD$");
  *	- use mmap where possible
  *	- make bzip2/compress -v/-t/-l support work as well as possible
  */
+#ifdef GZ_SHMEM
+#include <sys/mman.h>
+#endif
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -651,8 +654,15 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 				 0, 0, 0, 0,
 				 0, OS_CODE };
 #endif
+#ifndef GZ_SHMEM
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
+#else
+	outbufp = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_SHARED, -1, 0);
+	inbufp = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_SHARED, -1, 0);
+#endif
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;

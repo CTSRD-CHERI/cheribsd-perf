@@ -17,6 +17,7 @@ GZIP_U_LIBZ_H1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"h1\" -I../libz_h2/
 GZIP_U_LIBZ_HM_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"hm\" -I../libz_h2/
 GZIP_U_LIBZ_A1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"a1\" -I../libz_all/
 GZIP_U_LIBZ_AM_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"am\" -I../libz_all/
+GZIP_U_LIBZ_A1_SHMEM_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"a1_shmem\" -I../libz_all/
 GZIP_U_LIBZ_C_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"c\" -I../libz_h2/
 GZIP_A_LIBZ_C_CFLAGS=-DSB_GZIP_TYPE=\"a\" -DSB_LIBZ_TYPE=\"c\" -DSB_GZIP_CAPSICUM -I../libsep/ -I../libz_h2/
 GZIP_U_LIBZ_HJ1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"hj1\" -I../libz_h2/
@@ -25,6 +26,7 @@ GZIP_U_LIBZ_SABI1_CFLAGS=-DSB_GZIP_TYPE=\"u\" -DSB_LIBZ_TYPE=\"sabi1\" -I../libz
 # Hmm, not completely unmodified then
 GZIP_U_LIBZ_A1_CFLAGS+=-DSB_LIBZ_CAPSICUM -DLZ_SINGLE_SANDBOX
 GZIP_U_LIBZ_AM_CFLAGS+=-DSB_LIBZ_CAPSICUM
+GZIP_U_LIBZ_A1_SHMEM_CFLAGS+=-DSB_LIBZ_CAPSICUM -DLZ_SINGLE_SANDBOX -DGZ_SHMEM
 GZIP_U_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
 GZIP_H_CFLAGS+=-DZLIB_CAP_ONLY
 GZIP_A_LIBZ_C_CFLAGS+=-DZLIB_CAP_ONLY
@@ -37,6 +39,7 @@ GZIP_U_LIBZ_H1_LDADD=../libz_h2/libzwrapper1.a
 GZIP_U_LIBZ_HM_LDADD=../libz_h2/libzwrapperm.a
 GZIP_U_LIBZ_A1_LDADD=../libz_all/libz_a1.a
 GZIP_U_LIBZ_AM_LDADD=../libz_all/libz_am.a
+GZIP_U_LIBZ_A1_SHMEM_LDADD=../libz_all/libz_a1_shmem.a
 GZIP_U_LIBZ_C_LDADD=../libz_h2/libz_c.a
 GZIP_A_LIBZ_C_LDADD=../libz_h2/libz_c.a ../libsep/libsep.a
 GZIP_U_LIBZ_HJ1_LDADD=../libz_h2/libzwrapper1j.a
@@ -48,7 +51,7 @@ all: dep progs
 clean: clean-dep clean-progs
 		echo done
 
-progs: gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_hj1 gzip_u_libz_sabi1
+progs: gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_a1_shmem gzip_u_libz_hj1 gzip_u_libz_sabi1
 		echo done
 
 everything: clean all push
@@ -142,6 +145,9 @@ gzip_u_libz_a1.o:
 gzip_u_libz_am.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_AM_CFLAGS) -c gzip.c -o gzip_u_libz_am.o
 
+gzip_u_libz_a1_shmem.o:
+		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_A1_SHMEM_CFLAGS) -c gzip.c -o gzip_u_libz_a1_shmem.o
+
 gzip_u_libz_c.o:
 		$(CC) $(CFLAGS) $(GZIP_U_LIBZ_C_CFLAGS) -c gzip.c -o gzip_u_libz_c.o
 
@@ -189,6 +195,9 @@ gzip_u_libz_a1: gzip_u_libz_a1.o libz_a
 gzip_u_libz_am: gzip_u_libz_am.o libz_a
 		$(CC) $(CFLAGS) -o gzip_u_libz_am gzip_u_libz_am.o $(GZIP_U_LIBZ_AM_LDADD)
 
+gzip_u_libz_a1_shmem: gzip_u_libz_a1_shmem.o libz_a
+		$(CC) $(CFLAGS) -o gzip_u_libz_a1_shmem gzip_u_libz_a1_shmem.o $(GZIP_U_LIBZ_A1_SHMEM_LDADD)
+
 gzip_u_libz_c: gzip_u_libz_c.o libz_c
 		$(CC) $(CFLAGS) -o gzip_u_libz_c gzip_u_libz_c.o $(GZIP_U_LIBZ_C_LDADD)
 
@@ -196,10 +205,10 @@ gzip_a_libz_c: gzip_a_libz_c.o gzsandbox_a_libz_c.o libz_c libsep
 		$(CC) $(CFLAGS) -o gzip_a_libz_c gzip_a_libz_c.o gzsandbox_a_libz_c.o $(GZIP_A_LIBZ_C_LDADD)
 
 clean-progs:
-		rm -f *.o *.E gzip gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hj1 gzip_u_libz_sabi1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin bin.tar
+		rm -f *.o *.E gzip gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hj1 gzip_u_libz_sabi1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_a1_shmem gzip_u_libz_c gzip_a_libz_c gzsandbox-helper_h gzsandbox-helper_h.bin bin.tar
 		rm -rf results
 
-push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h1 push-gzip_u_libz_hj1 push-gzip_u_libz_sabi1 push-gzip_u_libz_hm push-gzip_u_libz_am push-gzip_u_libz_a1 push-test
+push: push-gzip_u push-gzip_a push-gzip_h push-gzip_u_libz_h1 push-gzip_u_libz_hj1 push-gzip_u_libz_sabi1 push-gzip_u_libz_hm push-gzip_u_libz_am push-gzip_u_libz_a1 push-gzip_u_libz_a1_shmem push-test
 
 push-gzip_u:
 		$(CHERI_PUSH) gzip_u $(CHERI_PUSH_DIR)/gzip_u
@@ -231,6 +240,9 @@ push-gzip_u_libz_a1:
 
 push-gzip_u_libz_am:
 		$(CHERI_PUSH) gzip_u_libz_am $(CHERI_PUSH_DIR)/gzip_u_libz_am
+
+push-gzip_u_libz_a1_shmem:
+		$(CHERI_PUSH) gzip_u_libz_a1 $(CHERI_PUSH_DIR)/gzip_u_libz_a1_shmem
 
 push-gzip_u_libz_c:
 		$(CHERI_PUSH) gzip_u_libz_c $(CHERI_PUSH_DIR)/gzip_u_libz_c
@@ -268,7 +280,7 @@ pull-local-results:
 tar:
 		cp ../libz_h2/lzsandbox-helper_u .
 		cp ../libz_h2/lzsandbox-helper_j .
-		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzsandbox-helper_h gzsandbox-helper_h lzsandbox-helper_u lzsandbox-helper_j test.sh
+		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_a1_shmem gzsandbox-helper_h gzsandbox-helper_h lzsandbox-helper_u lzsandbox-helper_j test.sh
 		rm lzsandbox-helper_u
 
 push-tar:
