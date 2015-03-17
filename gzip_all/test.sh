@@ -302,9 +302,9 @@ case3 ()
   if [ ! -n "$LONG_RUN" ]
   then
     nrun=3
-    SIZES="4096 65536 500000"
-    NFILES="1 2 5 10 15"
-    PROGS="gzip_u_libz_am gzip_u_libz_a1"
+    SIZES="500000"
+    NFILES="1 8 16 32"
+    PROGS="gzip_u_libz_am gzip_u_libz_a1 gzip_u_libz_a1_shmem"
   else
     nrun=11
     SIZES="500000"

@@ -46,13 +46,12 @@ OBJS_A1_SHMEM=$(OBJS:S/.o/_a1_shmem.o/g)
 .c_a1_shmem.o:
 	$(CC) $(CFLAGS) $(LIBZ_A1_SHMEM_CFLAGS) -c $< -o $@
 
+all: libz_u.a libz_a1.a libz_am.a libz_a1_shmem.a
+
 libz_u.a: $(OBJS_U)
 	$(AR) -r libz_u.a $(OBJS_U)
 
 .PHONY: libz_a
-libz_a1.a: libz_a
-libz_am.a: libz_a
-libz_a1_shmem.a: libz_a
 libz_a: $(OBJS_A1) $(OBJS_AM) $(OBJS_A1_SHMEM)
 	mkdir -p tmpdir
 	cd tmpdir && \
@@ -61,6 +60,10 @@ libz_a: $(OBJS_A1) $(OBJS_AM) $(OBJS_A1_SHMEM)
 	$(AR) -r libz_a1.a $(OBJS_A1) tmpdir/*.o
 	$(AR) -r libz_am.a $(OBJS_AM) tmpdir/*.o
 	$(AR) -r libz_a1_shmem.a $(OBJS_A1_SHMEM) tmpdir/*.o
+
+libz_a1.a: libz_a
+libz_am.a: libz_a
+libz_a1_shmem.a: libz_a
 
 clean:
 	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz

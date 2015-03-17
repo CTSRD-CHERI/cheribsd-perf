@@ -658,10 +658,17 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
 #else
-	outbufp = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
-	    MAP_ANON | MAP_SHARED, -1, 0);
-	inbufp = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
-	    MAP_ANON | MAP_SHARED, -1, 0);
+	static int gz_shmem_allocated;
+	static char *outbufpm, *inbufpm;
+	if (!gz_shmem_allocated) {
+		outbufpm = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+		    MAP_ANON | MAP_SHARED, -1, 0);
+		inbufpm = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+		    MAP_ANON | MAP_SHARED, -1, 0);
+		gz_shmem_allocated = 1;
+	}
+	outbufp = outbufpm;
+	inbufp = inbufpm;
 #endif
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
@@ -804,23 +811,23 @@ struct timeval before, after, diff, total;
 		goto out;
 	}
 
-  /* Avoid printf()-like functions because CHERI Clang/LLVM messes up varargs that spill to the stack */
-  if (BUFLEN >= 8)
-  {
-    outbufp[0] = crc & 0xff;
-    outbufp[1] = (crc >> 8) & 0xff;
-    outbufp[2] = (crc >> 16) & 0xff;
-    outbufp[3] = (crc >> 24) & 0xff;
-    outbufp[4] = in_tot & 0xff;
-    outbufp[5] = (in_tot >> 8) & 0xff;
-    outbufp[6] = (in_tot >> 16) & 0xff;
-    outbufp[7] = (in_tot >> 24) & 0xff;
-    i = 8;
-  }
-  else
-  {
-    i = 0;
-  }
+	/*
+	 * Avoid printf()-like functions because CHERI Clang/LLVM messes
+	 * up varargs that spill to the stack.
+	 */
+	if (BUFLEN >= 8) {
+		outbufp[0] = crc & 0xff;
+		outbufp[1] = (crc >> 8) & 0xff;
+		outbufp[2] = (crc >> 16) & 0xff;
+		outbufp[3] = (crc >> 24) & 0xff;
+		outbufp[4] = in_tot & 0xff;
+		outbufp[5] = (in_tot >> 8) & 0xff;
+		outbufp[6] = (in_tot >> 16) & 0xff;
+		outbufp[7] = (in_tot >> 24) & 0xff;
+		i = 8;
+	} else {
+		i = 0;
+	}
 
 	/*i = snprintf(outbufp, BUFLEN, "%c%c%c%c%c%c%c%c", 
 		 (int)crc & 0xff,
@@ -841,9 +848,17 @@ struct timeval before, after, diff, total;
 
 out:
 	if (inbufp != NULL)
+#ifdef GZ_SHMEM
+		/*(void)munmap(inbufp, BUFLEN);*/
+#else
 		free(inbufp);
+#endif
 	if (outbufp != NULL)
+#ifdef GZ_SHMEM
+		/*(void)munmap(outbufp, BUFLEN);*/
+#else
 		free(outbufp);
+#endif
 	if (gsizep)
 		*gsizep = out_tot;
 	return in_tot;

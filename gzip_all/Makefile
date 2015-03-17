@@ -80,7 +80,7 @@ clean-libz_u:
 
 libz_a:
 		cd ../libz_all && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) libz_a1.a libz_am.a
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) libz_a1.a libz_am.a libz_a1_shmem.a
 
 clean-libz_a:
 		cd ../libz_all && \
@@ -242,7 +242,7 @@ push-gzip_u_libz_am:
 		$(CHERI_PUSH) gzip_u_libz_am $(CHERI_PUSH_DIR)/gzip_u_libz_am
 
 push-gzip_u_libz_a1_shmem:
-		$(CHERI_PUSH) gzip_u_libz_a1 $(CHERI_PUSH_DIR)/gzip_u_libz_a1_shmem
+		$(CHERI_PUSH) gzip_u_libz_a1_shmem $(CHERI_PUSH_DIR)/gzip_u_libz_a1_shmem
 
 push-gzip_u_libz_c:
 		$(CHERI_PUSH) gzip_u_libz_c $(CHERI_PUSH_DIR)/gzip_u_libz_c
