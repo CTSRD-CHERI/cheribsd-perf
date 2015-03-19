@@ -1,19 +1,10 @@
 nrun=1
-#SIZES="64 256 512 4096 16384 65536 500000 1000000 5000000 10000000"
-#SIZES="64 4096 65536 500000 1000000"
 SIZES="4096 65536 500000"
 MAXSIZE=10000000
 BS=$MAXSIZE
 
-# for sb_create_test:
-NFILES="1 2 5 10"
 ZERO="0"
 
-# for buflen_test:
-BUFLENS="4096 65536 131072"
-
-#PROGS="gzip_u gzip_u_libz_c gzip_a gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_h1 gzip_u_libz_hm gzip_h gzip_a_libz_c"
-PROGS="gzip_u gzip_h"
 DESC_gzip_u="(unmodified gzip + unmodified zlib)"
 DESC_gzip_u_libz_c="(unmodified gzip + capability-only zlib)"
 DESC_gzip_a="(Capsicum gzip)"
@@ -46,13 +37,11 @@ compress_time_test ()
 {
   sz=$outer_var
   results_file=results$CASE-$func-$b-$sz
-  cat file_list | time xargs -n 1 $1 -B65536 -c 1>/dev/null 2>>$results_file
+  time $1 -B65536 -kc DATA-$sz 1>/dev/null 2>>$results_file
   check_results
 }
 gen_compress_time_file_list ()
 {
-  sz=$outer_var
-  echo -e "ZERO-$sz\nRANDOM-$sz\nENTROPY-$sz\n" > file_list
 }
 init_compress_time_test ()
 {
@@ -303,13 +292,13 @@ case3 ()
   then
     nrun=3
     SIZES="500000"
-    NFILES="1 8 16 32"
+    NFILES="1 32 128"
     PROGS="gzip_u_libz_am gzip_u_libz_a1 gzip_u_libz_a1_shmem"
   else
     nrun=11
     SIZES="500000"
-    NFILES="1 2 3 4 5 6 7 8 9 10"
-    PROGS="gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1 gzip_u"
+    NFILES="1 2 4 8 16 32 64 128"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1 gzip_u_libz_a1_shmem"
   fi
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
 }
@@ -326,7 +315,7 @@ case4 ()
   else
     nrun=11
     SIZES="4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608"
-    PROGS="gzip_u gzip_u_libz_h1 gzip_h gzip_a_libz_a1 gzip_a"
+    PROGS="gzip_u gzip_h gzip_a gzip_u_libz_h1 gzip_u_libz_a1 gzip_u_libz_a1_shmem"
   fi
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }
