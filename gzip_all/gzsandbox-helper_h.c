@@ -64,17 +64,18 @@ static	void	maybe_err(const char *fmt, ...) __printflike(1, 2) __dead2;
 static	void	maybe_warn(const char *fmt, ...) __printflike(1, 2);
 static	void	maybe_warnx(const char *fmt, ...) __printflike(1, 2);
 
+__attribute__((cheri_ccallee))
+__attribute__((cheri_method_suffix("_cap")))
+__attribute__((cheri_method_class(cheri_gzip)))
 int
-invoke(register_t op,
-  __capability void * c1,
-  __capability void * c2,
+cheri_gzip_invoke(register_t op,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams
 #ifdef SB_COLLECT_STATS
   ,__capability int * param_num_ccalls
 #endif /* SB_COLLECT_STATS */
-) __attribute__((cheri_ccall));
+);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
@@ -85,6 +86,14 @@ void vwarnx (const char * restrict format, va_list ap);
 __capability void * malloc_c (size_t size);
 void free_c (__capability void * ptr);
 size_t strlen_c (__capability const char * str);
+
+int
+invoke(void)
+{
+
+	printf("unimplemented\n");
+	return (-1);
+}
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes)
 {
@@ -168,9 +177,7 @@ size_t strlen_c (__capability const char * str)
 }
 
 int
-invoke(register_t op,
-  __capability void * c1,
-  __capability void * c2,
+cheri_gzip_invoke(register_t op,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
   __capability void * vparams

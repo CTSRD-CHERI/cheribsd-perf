@@ -21,13 +21,16 @@ extern __capability void	*cheri_system_type;
 
 static struct cheri_object stderrfd;
 
+__attribute__((cheri_ccallee))
+__attribute__((cheri_method_suffix("_cap")))
+__attribute__((cheri_method_class(cheri_zlib)))
 int
-invoke(register_t op,
+cheri_zlib_invoke(register_t op,
   __capability void * c1,
   __capability void * c2,
   __capability void * co_codecap_stderrfd,
   __capability void * co_datacap_stderrfd,
-  __capability void * vparams) __attribute__((cheri_ccall));
+  __capability void * vparams);
 
 ssize_t read_c (struct cheri_object fd, void * buf, size_t nbytes);
 ssize_t write_c (struct cheri_object fd, const void * buf, size_t nbytes);
@@ -112,7 +115,15 @@ int ef_c (__capability const char * format, ...)
 int ef_dc (int x){}
 
 int
-invoke(register_t op,
+invoke(void)
+{
+
+	printf("unimplemented\n");
+	return (-1);
+}
+
+int
+cheri_zlib_invoke(register_t op,
   __capability void * c1,
   __capability void * c2,
   __capability void * co_codecap_stderrfd,

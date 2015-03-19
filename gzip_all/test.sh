@@ -42,6 +42,7 @@ compress_time_test ()
 }
 gen_compress_time_file_list ()
 {
+
 }
 init_compress_time_test ()
 {
@@ -154,9 +155,9 @@ generate ()
   # the following files are automatically generated from them
   for sz in $SIZES
   do
-    prun dd if=ZERO of=ZERO-$sz bs=$sz count=1
-    prun dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
-    prun dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
+    #prun dd if=ZERO of=ZERO-$sz bs=$sz count=1
+    #prun dd if=RANDOM of=RANDOM-$sz bs=$sz count=1
+    #prun dd if=ENTROPY of=ENTROPY-$sz bs=$sz count=1
     szdiv3=`expr $sz / 3`
     dd if=ZERO bs=$szdiv3 count=1 > DATA-$sz
     dd if=RANDOM bs=$szdiv3 count=1 >> DATA-$sz

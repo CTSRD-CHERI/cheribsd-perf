@@ -280,8 +280,9 @@ pull-local-results:
 tar:
 		cp ../libz_h2/lzsandbox-helper_u .
 		cp ../libz_h2/lzsandbox-helper_j .
-		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_a1_shmem gzsandbox-helper_h gzsandbox-helper_h lzsandbox-helper_u lzsandbox-helper_j test.sh
+		tar cf bin.tar gzip_u gzip_a gzip_h gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_a1 gzip_u_libz_am gzip_u_libz_a1_shmem gzsandbox-helper_h lzsandbox-helper_u lzsandbox-helper_j test.sh
 		rm lzsandbox-helper_u
+		rm lzsandbox-helper_j
 
 push-tar:
 		$(CHERI_PUSH) bin.tar $(CHERI_PUSH_DIR)/bin.tar

@@ -16,6 +16,17 @@ extern int num_ccalls;
 extern int num_sandboxes;
 #endif /* SB_COLLECT_STATS */
 
+__attribute__((cheri_ccall))
+__attribute__((cheri_method_suffix("_cap")))
+__attribute__((cheri_method_class(cheri_zlib)))
+int
+cheri_zlib_invoke(register_t op,
+  __capability void * c1,
+  __capability void * c2,
+  __capability void * co_codecap_stderrfd,
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams);
+
 #ifdef SABI_ONLY
 /*
  * SABI_ONLY:
@@ -455,7 +466,8 @@ lzsandbox_initialize(z_streamp strm)
 			return (-1);
 		}
 #ifdef LZ_SINGLE_SANDBOX
-		if (sandbox_object_new(sbcp, &sbop)) {
+		if (sandbox_object_new(sbcp, LZ_SANDBOX_HEAP_SIZE,
+		    &sbop)) {
 			fprintf(stderr, "sandbox_object_new\n");
 			return (-1);
 		}
@@ -467,7 +479,8 @@ lzsandbox_initialize(z_streamp strm)
 
 #ifndef LZ_SINGLE_SANDBOX
 	if (!strm->sbop) {
-		if (sandbox_object_new(sbcp, &strm->sbop)) {
+		if (sandbox_object_new(sbcp, LZ_SANDBOX_HEAP_SIZE,
+		    &strm->sbop)) {
 			fprintf(stderr, "sandbox_object_new\n");
 			return (-1);
 		}
@@ -492,14 +505,13 @@ lzsandbox_invoke(z_streamp strm, int opno, struct lzparams *params)
 	num_ccalls++;
 #endif /* SB_COLLECT_STATS */
   
-	return (sandbox_object_cinvoke(local_sbop, opno, 
-	    0, 0, 0, 0, 0, 0, 0, 0,
+	return (cheri_zlib_invoke_cap(
+	    sandbox_object_getobject(local_sbop),
+	    opno, 
+	    NULL, NULL,
 	    stderrfd.co_codecap, stderrfd.co_datacap,
 	    cheri_ptrperm(params, sizeof(struct lzparams),
-		CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP),
-	    cheri_zerocap(),
-	    cheri_zerocap(), cheri_zerocap(),
-	    cheri_zerocap(), cheri_zerocap()));
+		CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP)));
 }
 
 int ZEXPORT

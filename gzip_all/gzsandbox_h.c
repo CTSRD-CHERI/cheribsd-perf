@@ -36,6 +36,19 @@ static struct    sandbox_object * sbop;
 static void
 gzsandbox_initialize(void);
 
+__attribute__((cheri_ccall))
+__attribute__((cheri_method_suffix("_cap")))
+__attribute__((cheri_method_class(cheri_gzip)))
+int
+cheri_gzip_invoke(register_t op,
+  __capability void * co_codecap_stderrfd,
+  __capability void * co_datacap_stderrfd,
+  __capability void * vparams
+#ifdef SB_COLLECT_STATS
+  ,__capability int * param_num_ccalls
+#endif /* SB_COLLECT_STATS */
+);
+
 static void
 gzsandbox_initialize(void)
 {
@@ -50,7 +63,7 @@ gzsandbox_initialize(void)
   if (sandbox_class_new(GZIP_SANDBOX_BIN, 4*1048576, &sbcp))
     err(-1, "sandbox_class_new %s", GZIP_SANDBOX_BIN);
 
-  if (sandbox_object_new(sbcp, &sbop))
+  if (sandbox_object_new(sbcp, 4*1048576, &sbop))
     err(-1, "sandbox_object_new");
 #ifdef SB_COLLECT_STATS
     num_sandboxes++;
@@ -71,17 +84,16 @@ gzsandbox_initialize(void)
   num_ccalls++;
 #endif /* SB_COLLECT_STATS */
   
-  rc = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_INIT, 
-            0, 0, 0, 0, 0, 0, 0, 0,
+  rc = cheri_gzip_invoke_cap(sandbox_object_getobject(sbop),
+      GZSANDBOX_HELPER_OP_INIT, 
             stderrfd.co_codecap, stderrfd.co_datacap,
             cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD),
 #ifdef SB_COLLECT_STATS
-            cheri_ptrperm(&num_ccalls, sizeof num_ccalls, CHERI_PERM_LOAD | CHERI_PERM_STORE),
+            cheri_ptrperm(&num_ccalls, sizeof num_ccalls, CHERI_PERM_LOAD | CHERI_PERM_STORE)
 #else /* SB_COLLECT_STATS */
-            cheri_zerocap(),
+            ,cheri_zerocap()
 #endif /* SB_COLLECT_STATS */
-            cheri_zerocap(), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap());
+            );
     if (rc != 0)
       err(-1, "sandbox_object_cinvoke");
 }
@@ -117,12 +129,10 @@ gz_compress_wrapper(int in, int out, off_t *gsizep, const char *origname,
 #ifdef SB_COLLECT_STATS
   num_ccalls++;
 #endif /* SB_COLLECT_STATS */
-  rc = sandbox_object_cinvoke(sbop, GZSANDBOX_HELPER_OP_GZCOMPRESS, 
-            0, 0, 0, 0, 0, 0, 0, 0,
+  rc = cheri_gzip_invoke_cap(sandbox_object_getobject(sbop),
+      GZSANDBOX_HELPER_OP_GZCOMPRESS, 
             cheri_zerocap(), cheri_zerocap(),
-            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap(),
-            cheri_zerocap(), cheri_zerocap());
+            cheri_ptrperm(&params, sizeof params, CHERI_PERM_LOAD | CHERI_PERM_LOAD_CAP), cheri_zerocap());
 
   return (rc);
 }

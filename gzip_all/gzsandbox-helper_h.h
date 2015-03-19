@@ -35,4 +35,6 @@ struct gz_init_params
 #endif /* DYNAMIC_BUFLEN */
 };
 
+extern struct cheri_object	cheri_gzip;
+
 #endif /* !_GZSANDBOX_HELPER_H_ */

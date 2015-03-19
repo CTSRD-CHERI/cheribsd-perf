@@ -17,6 +17,8 @@
 #include <machine/cheri.h>
 #include <machine/cheric.h>
 
+extern struct cheri_object	cheri_zlib;
+
 struct lzparams
 {
   z_stream_cap_pc strm;
