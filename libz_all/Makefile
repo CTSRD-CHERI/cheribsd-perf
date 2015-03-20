@@ -54,12 +54,16 @@ libz_u.a: $(OBJS_U)
 .PHONY: libz_a
 libz_a: $(OBJS_A1) $(OBJS_AM) $(OBJS_A1_SHMEM)
 	mkdir -p tmpdir
+	mkdir -p tmpdir_shmem
 	cd tmpdir && \
 	$(AR) -x ../../libsep/libsep.a && \
+	cd .. && \
+	cd tmpdir_shmem && \
+	$(AR) -x ../../libsep/libsep_shmem.a && \
 	cd ..
 	$(AR) -r libz_a1.a $(OBJS_A1) tmpdir/*.o
 	$(AR) -r libz_am.a $(OBJS_AM) tmpdir/*.o
-	$(AR) -r libz_a1_shmem.a $(OBJS_A1_SHMEM) tmpdir/*.o
+	$(AR) -r libz_a1_shmem.a $(OBJS_A1_SHMEM) tmpdir_shmem/*.o
 
 libz_a1.a: libz_a
 libz_am.a: libz_a
@@ -67,5 +71,5 @@ libz_a1_shmem.a: libz_a
 
 clean:
 	rm -f *.so *.o *.so.1 *.So *.po *.a *.gz
-	rm -rf tmpdir
+	rm -rf tmpdir tmpdir_shmem
 

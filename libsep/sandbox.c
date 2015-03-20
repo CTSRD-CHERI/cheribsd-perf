@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifdef GZ_SHMEM
+#include <sys/mman.h>
+#endif
+
 #include "sandbox_rpc.h"
 #include "sandbox.h"
 
@@ -76,6 +80,24 @@ sandbox_create(struct sandbox_cb *scb, int (*sandbox_mainfn)(void * context), vo
 	/* Update control block */
 	scb->fd_host_end = fd_sockpair[0];
 	scb->fd_sandbox_end = fd_sockpair[1];
+
+#ifdef GZ_SHMEM
+#define BUFLEN 65536
+	/* Allocate shared memory. */
+	scb->inbuf = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_SHARED, -1, 0);
+	if (scb->inbuf == NULL) {
+		perror("mmap");
+		exit(1);
+	}
+	scb->outbuf = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_SHARED, -1, 0);
+	if (scb->inbuf == NULL) {
+		perror("mmap");
+		exit(1);
+	}
+	scb->buflen = BUFLEN;
+#endif
 
 	/* Spawn sandbox */
 	pid = fork();

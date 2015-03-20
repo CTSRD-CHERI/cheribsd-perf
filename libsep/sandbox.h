@@ -6,6 +6,9 @@ struct sandbox_cb {
 	int fd_host_end;
 	int fd_sandbox_end;
 	int sandbox_pid;
+	void *inbuf;
+	void *outbuf;
+	size_t buflen;
 };
 
 /*

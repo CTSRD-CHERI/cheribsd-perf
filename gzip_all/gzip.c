@@ -45,9 +45,6 @@ __FBSDID("$FreeBSD$");
  *	- use mmap where possible
  *	- make bzip2/compress -v/-t/-l support work as well as possible
  */
-#ifdef GZ_SHMEM
-#include <sys/mman.h>
-#endif
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -654,22 +651,8 @@ gz_compress(int in, int out, off_t *gsizep, const char *origname, uint32_t mtime
 				 0, 0, 0, 0,
 				 0, OS_CODE };
 #endif
-#ifndef GZ_SHMEM
 	outbufp = malloc(BUFLEN);
 	inbufp = malloc(BUFLEN);
-#else
-	static int gz_shmem_allocated;
-	static char *outbufpm, *inbufpm;
-	if (!gz_shmem_allocated) {
-		outbufpm = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
-		    MAP_ANON | MAP_SHARED, -1, 0);
-		inbufpm = mmap(NULL, BUFLEN, PROT_READ | PROT_WRITE,
-		    MAP_ANON | MAP_SHARED, -1, 0);
-		gz_shmem_allocated = 1;
-	}
-	outbufp = outbufpm;
-	inbufp = inbufpm;
-#endif
 	if (outbufp == NULL || inbufp == NULL) {
 		maybe_err("malloc failed");
 		goto out;
@@ -848,17 +831,9 @@ struct timeval before, after, diff, total;
 
 out:
 	if (inbufp != NULL)
-#ifdef GZ_SHMEM
-		/*(void)munmap(inbufp, BUFLEN);*/
-#else
 		free(inbufp);
-#endif
 	if (outbufp != NULL)
-#ifdef GZ_SHMEM
-		/*(void)munmap(outbufp, BUFLEN);*/
-#else
 		free(outbufp);
-#endif
 	if (gsizep)
 		*gsizep = out_tot;
 	return in_tot;

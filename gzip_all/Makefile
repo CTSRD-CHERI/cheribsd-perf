@@ -108,11 +108,11 @@ clean-libz_c:
 
 libsep:
 		cd ../libsep && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI all
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) all
 
 clean-libsep:
 		cd ../libsep && \
-		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) -f Makefile.CHERI clean
+		OPTCFLAGS="$(OPTCFLAGS)" $(MAKE) clean
 
 gzip_u.o:
 		$(CC) $(CFLAGS) $(GZIP_U_CFLAGS) -c gzip.c -o gzip_u.o

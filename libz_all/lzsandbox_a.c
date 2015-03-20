@@ -73,11 +73,13 @@ lz_deflate_insandbox(z_streamp strm, int flush)
 	struct host_rpc_params params;
 	struct iovec iov_req[2], iov_rep[2];
 	int iovcount;
-	size_t len, repsz;
+	size_t len, repsz, sz;
+	Bytef *caller_next_in;
+	Bytef *caller_next_out;
+	size_t caller_avail_out;
 
 	iovcount = 0;
 	bzero(&req, sizeof(req));
-	memcpy(&req.hzc_req_strm, strm, sizeof(z_stream));
 	req.hzc_req_flush = flush;
 	iov_req[0].iov_base = &req;
 	iov_req[0].iov_len = sizeof(req);
@@ -92,7 +94,18 @@ lz_deflate_insandbox(z_streamp strm, int flush)
 	iov_rep[1].iov_len = strm->avail_out;
 	iovcount++;
 	repsz += strm->avail_out;
+	(void)sz;
+#else
+	caller_next_in = strm->next_in;
+	caller_next_out = strm->next_out;
+	caller_avail_out = strm->avail_out;
+	sz = (strm->avail_in < local_lcsp->buflen) ? strm->avail_in :
+	    local_lcsp->buflen;
+	memcpy(local_lcsp->inbuf, strm->next_in, sz);
+	strm->next_in = local_lcsp->inbuf;
+	strm->next_out = local_lcsp->outbuf;
 #endif
+	memcpy(&req.hzc_req_strm, strm, sizeof(z_stream));
 	params.scb = local_lcsp;
 	params.opno = PROXIED_LZ_DEFLATE;
 	params.req = iov_req;
@@ -112,6 +125,17 @@ lz_deflate_insandbox(z_streamp strm, int flush)
 	/* XXX: TODO: a check on strm to make sure sandbox hasn't caused buffer overflow */
 	/* NOTE: sandbox never gets write access to next_in's contents, but can still cause damage */
 	memcpy(strm, &rep.hzc_rep_strm, sizeof(z_stream));
+
+#ifdef GZ_SHMEM
+	/* Pointer fix-up. */
+	strm->next_in -= (size_t)local_lcsp->inbuf;
+	strm->next_in += (size_t)caller_next_in;
+	sz = (caller_avail_out < local_lcsp->buflen) ? caller_avail_out :
+	    local_lcsp->buflen;
+	memcpy(caller_next_out, local_lcsp->outbuf, sz);
+	strm->next_out -= (size_t)local_lcsp->outbuf;
+	strm->next_out += (size_t)caller_next_out;
+#endif
 
 	return (rep.hzc_rep_retval);
 }
@@ -421,7 +445,7 @@ lz_crc32_insandbox(z_streamp strm, uLong crc, const Bytef *buf, uInt len)
 	struct host_lz_crc32_rep rep;
 	struct host_rpc_params params;
 	struct iovec iov_req[2], iov_rep;
-	size_t replen;
+	size_t replen, sz;
 	int iovcount;
 
 	iovcount = 0;
@@ -432,11 +456,14 @@ lz_crc32_insandbox(z_streamp strm, uLong crc, const Bytef *buf, uInt len)
 	iov_req[0].iov_len = sizeof(req);
 	iovcount++;
 #ifdef GZ_SHMEM
-	req.hzc_req_buf = buf;
+	sz = (len < local_lcsp->buflen) ? len : local_lcsp->buflen;
+	memcpy(local_lcsp->inbuf, buf, sz);
+	req.hzc_req_buf = local_lcsp->inbuf;
 #else
 	iov_req[1].iov_base = (void *)buf;
 	iov_req[1].iov_len = len;
 	iovcount++;
+	(void)sz;
 #endif
 	iov_rep.iov_base = &rep;
 	iov_rep.iov_len = sizeof(rep);
