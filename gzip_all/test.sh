@@ -294,12 +294,12 @@ case3 ()
     nrun=3
     SIZES="500000"
     NFILES="1 32 128"
-    PROGS="gzip_u_libz_am gzip_u_libz_a1 gzip_u_libz_a1_shmem"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1"
   else
-    nrun=11
+    nrun=3
     SIZES="500000"
-    NFILES="1 2 4 8 16 32 64 128"
-    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1 gzip_u_libz_a1_shmem"
+    NFILES="1 16 32 48 64 80 96 112 128"
+    PROGS="gzip_u gzip_u_libz_h1 gzip_u_libz_hm gzip_u_libz_am gzip_u_libz_a1"
   fi
   runtest sb_create_test init_sb_create_test gen_sb_create_file_list SIZES bytes NFILES files
 }
@@ -310,13 +310,13 @@ case4 ()
   CASE=4
   if [ ! -n "$LONG_RUN" ]
   then
-    nrun=1
-    SIZES="4096 65536 500000"
-    PROGS="gzip_u gzip_u_libz_c gzip_a gzip_a_libz_c"
+    nrun=3
+    SIZES="1000000 2000000 3000000 4000000 5000000 6000000 7000000 8000000"
+    PROGS="gzip_u gzip_h gzip_a gzip_u_libz_h1 gzip_u_libz_a1"
   else
     nrun=11
-    SIZES="4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608"
-    PROGS="gzip_u gzip_h gzip_a gzip_u_libz_h1 gzip_u_libz_a1 gzip_u_libz_a1_shmem"
+    SIZES="1000000 2000000 3000000 4000000 5000000 6000000 7000000 8000000"
+    PROGS="gzip_u gzip_h gzip_a gzip_u_libz_h1 gzip_u_libz_a1"
   fi
   runtest compress_time_test init_compress_time_test gen_compress_time_file_list SIZES bytes ZERO ""
 }
